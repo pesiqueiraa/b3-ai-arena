@@ -1,3 +1,4 @@
 modelo,dias,faltando,brier,habilidade_brier,compras_por_dia,retorno_com_custos,retorno_sem_custos,retorno_bova11,acerto_das_compras,acerto_de_direcao,pior_queda,bateu_aleatorios
 ml,17,0,0.251885,-0.007526,5.529412,0.249496,0.262215,0.094405,0.553191,0.481618,-0.036581,0.986000
+llm,17,0,0.258589,-0.034340,9.823529,0.104658,0.113741,0.094405,0.562874,0.522059,-0.027556,0.695000
 sempre_comprar,17,0,0.444853,-0.779387,16.000000,0.103914,0.104466,0.094405,0.555147,0.555147,-0.031456,

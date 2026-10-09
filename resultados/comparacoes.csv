@@ -1,2 +1,4 @@
 tipo,modelo_a,modelo_b,dias,pares,confianca,dif_media,ic_baixo,ic_alto,veredito
+secundaria,llm,ml,17,272,0.950000,0.006704,-0.015558,0.028965,parcial (17 de 250 pregões)
+secundaria,llm,taxa_historica,17,272,0.950000,0.008585,-0.011422,0.028592,parcial (17 de 250 pregões)
 secundaria,ml,taxa_historica,17,272,0.950000,0.001882,-0.001612,0.005375,parcial (17 de 250 pregões)
