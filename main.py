@@ -12,7 +12,8 @@ Ponto de entrada do projeto. Rode no terminal, de dentro da pasta do projeto:
     python main.py ml-historico   # EXTRA: avalia só o ML em 2025 (fora da comparação oficial)
     python main.py estado         # EXTRA: mostra exemplos do texto enviado ao Jev e ao LLM
 
-Opção:
+Opções:
+    --teste     (só para llm) faz UMA pergunta num pregão antigo para testar chave e modelo.
     --refazer   recalcula TODOS os dias, apagando decisões já gravadas.
                 Cuidado: decisões já commitadas no git deixam de valer como prova.
 """
@@ -43,7 +44,13 @@ def etapa_jev(args) -> None:
 
 def etapa_llm(args) -> None:
     from src.modelos import llm
-    llm.rodar(refazer=args.refazer)
+    try:
+        if args.teste:
+            llm.testar()
+        else:
+            llm.rodar(refazer=args.refazer)
+    except llm.ErroDeConfiguracao as erro:
+        print(f"Etapa 'llm' não rodou: {erro}")
 
 
 def etapa_avaliar(args) -> None:
@@ -89,6 +96,8 @@ def main() -> None:
     parser.add_argument("etapa", choices=[*ETAPAS, "tudo", *EXTRAS], help="qual etapa rodar")
     parser.add_argument("--refazer", action="store_true",
                         help="recalcula todos os dias (apaga decisões já gravadas)")
+    parser.add_argument("--teste", action="store_true",
+                        help="(só llm) faz UMA pergunta num pregão antigo, para testar chave e modelo")
     args = parser.parse_args()
 
     if args.etapa == "tudo":

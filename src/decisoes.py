@@ -64,6 +64,24 @@ def dias_pendentes(nome: str, dias: list, refazer: bool = False) -> list:
     return [d for d in dias if d not in ja_decididos]
 
 
+def pares_pendentes(nome: str, pares: pd.DataFrame, ja_resolvidos: pd.DataFrame | None = None) -> pd.DataFrame:
+    """
+    Dos pares (data, ticker) pedidos, devolve os que ainda NÃO têm decisão gravada.
+    Usado pelos modelos de API (Jev e LLM), que decidem ação por ação.
+    'ja_resolvidos' permite pular também pares que falharam de vez (para não pagar de novo).
+    """
+    feitos = carregar(nome)[["data", "ticker"]]
+    if ja_resolvidos is not None and not ja_resolvidos.empty:
+        feitos = pd.concat([feitos, ja_resolvidos[["data", "ticker"]]], ignore_index=True)
+    m = pares.merge(feitos.drop_duplicates(), on=["data", "ticker"], how="left", indicator=True)
+    return m[m["_merge"] == "left_only"].drop(columns="_merge").reset_index(drop=True)
+
+
+def apagar(nome: str) -> None:
+    """Apaga as decisões gravadas de um modelo (usado só pelo --refazer)."""
+    arquivo_de(nome).unlink(missing_ok=True)
+
+
 def acrescentar(novas: pd.DataFrame, nome: str, refazer: bool = False) -> pd.DataFrame:
     """Junta as decisões novas às já gravadas, valida e salva. Devolve a tabela completa."""
     config.PASTA_DECISOES.mkdir(parents=True, exist_ok=True)

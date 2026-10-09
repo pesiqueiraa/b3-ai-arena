@@ -110,3 +110,12 @@ JEV_VERSAO = "jev-1.13.0"
 
 # O modelo do LLM vem do .env (LLM_MODELO). Temperatura 0 = sempre a resposta mais provável.
 LLM_TEMPERATURA = 0
+
+# API compatível com OpenRouter (https://openrouter.ai/docs/quickstart).
+LLM_URL = "https://openrouter.ai/api/v1/chat/completions"
+LLM_TIMEOUT_S = 120          # espera máxima por resposta
+LLM_TENTATIVAS_REDE = 3      # novas tentativas em erro de rede/servidor (não é a "nova tentativa" por resposta inválida)
+
+# Onde ficam o pré-registro e o registro de falhas das APIs.
+ARQUIVO_PREREGISTRO = RAIZ / "PREREGISTRO.md"
+ARQUIVO_FALHAS_LLM = PASTA_RESULTADOS / "falhas_llm.csv"   # versionado: transparência sobre o que falhou

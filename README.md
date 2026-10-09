@@ -105,7 +105,7 @@ python -m venv .venv
 # 3. Instale as bibliotecas
 pip install -r requirements.txt
 
-# 4. (Só para Jev e LLM, nas próximas etapas) copie .env.example para .env e preencha as chaves
+# 4. (Só para Jev e LLM) copie .env.example para .env e preencha as chaves
 
 # 5. Rode os testes (não precisa de internet)
 python -m pytest
@@ -122,6 +122,16 @@ python main.py ml-historico
 # Extra: mostra exemplos do texto que o Jev e o LLM recebem
 python main.py estado
 ```
+
+**LLM, na primeira vez:**
+1. Preencha `LLM_API_KEY` e `LLM_MODELO` no `.env`.
+2. `python main.py llm --teste` faz **uma** pergunta num pregão antigo, para conferir a chave, o
+   modelo e se ele responde no formato pedido. Não grava nenhuma decisão.
+3. Registre o modelo e a versão do prompt (`llm-prompt-v1`) num adendo ao `PREREGISTRO.md` e
+   faça o commit. Sem isso, `python main.py llm` se recusa a rodar.
+4. `python main.py llm` decide a janela limpa inteira. As respostas ficam em `resultados/cache/llm/`,
+   então rodar de novo não paga de novo. Respostas inválidas (mesmo após uma nova tentativa)
+   ficam registradas em `resultados/falhas_llm.csv`.
 
 **Rotina diária:** depois das ~18h (pregão fechado e consolidado), rode
 `python main.py baixar`, `python main.py ml` e faça **commit e push** das decisões
@@ -152,12 +162,13 @@ pregao-das-ias/
 │       │   └── __init__.py      # a etapa "python main.py ml"
 │       ├── baselines.py     # sempre_comprar
 │       ├── jev.py           #                                               (próxima etapa)
-│       └── llm.py           #                                               (próxima etapa)
+│       └── llm.py           # LLM via API compatível com OpenRouter
 ├── tests/
 │   ├── test_sem_vazamento.py   # provas de que ninguém vê o futuro
 │   ├── test_ml.py              # testes das correções da revisão
 │   ├── test_avaliacao.py       # Brier, taxa histórica e comparações pré-registradas
-│   └── test_estado.py          # texto do estado: formato, anonimização, sem gabarito
+│   ├── test_estado.py          # texto do estado: formato, anonimização, sem gabarito
+│   └── test_llm.py             # LLM com API falsa: formato, cache, nova tentativa, falhas
 ├── dados/                   # CSVs baixados (fora do git)
 ├── resultados/
 │   ├── decisoes/            # decisoes_<modelo>.csv (VERSIONADOS no git)
@@ -181,7 +192,7 @@ pregao-das-ias/
 | Plano de análise (`PREREGISTRO.md`) | registrado em 09/10/2026 |
 | `estado.py` (texto para Jev e LLM) | pronto e testado (formato a congelar no adendo do pré-registro) |
 | Jev | próxima etapa (implementar seguindo a documentação oficial, versão fixa `jev-1.13.0`) |
-| LLM | próxima etapa |
+| LLM | pronto e testado com API falsa (falta: chave, escolha do modelo e adendo do pré-registro) |
 
 ## Correções feitas na revisão dos scripts originais
 
