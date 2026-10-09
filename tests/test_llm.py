@@ -80,8 +80,10 @@ def test_validar_resposta(texto, esperado):
 
 def test_pedido_sem_busca_na_web_e_temperatura_zero():
     pedido = llm.montar_pedido(llm.montar_mensagens("Ação A."), MODELO)
-    assert set(pedido) == {"model", "messages", "temperature", "seed"}
+    assert set(pedido) == {"model", "messages", "temperature", "seed", "provider"}
     assert pedido["temperature"] == 0
+    assert pedido["provider"]["allow_fallbacks"] is False   # nunca troca de provedor sozinho
+    assert not any(k in pedido for k in ("tools", "plugins", "web_search_options"))
 
 
 def test_modelo_online_e_recusado(ambiente, monkeypatch):

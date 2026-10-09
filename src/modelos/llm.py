@@ -117,13 +117,18 @@ def montar_pedido(mensagens: list[dict], modelo: str) -> dict:
     """
     O corpo da requisição. De propósito, NÃO há "tools", "plugins" nem "web_search_options":
     é assim que a busca na web fica desligada no OpenRouter.
+    'provider' fixa quem roda o modelo; 'reasoning' fixa o nível de raciocínio (ver config.py).
     """
-    return {
+    pedido = {
         "model": modelo,
         "messages": mensagens,
         "temperature": config.LLM_TEMPERATURA,
         "seed": config.SEMENTE,
+        "provider": config.LLM_PROVEDOR,
     }
+    if config.LLM_RACIOCINIO is not None:
+        pedido["reasoning"] = config.LLM_RACIOCINIO
+    return pedido
 
 
 def validar_resposta(texto: str | None) -> float | None:
@@ -210,6 +215,8 @@ def perguntar(mensagens: list[dict], modelo: str, chave: str) -> dict:
         # usage.cost: "total amount charged to your account", em créditos do OpenRouter.
         "custo_usd": uso.get("cost"),
         "modelo_respondeu": bruto.get("model"),
+        "provedor_respondeu": bruto.get("provider"),
+        "tokens_raciocinio": ((uso.get("completion_tokens_details") or {}).get("reasoning_tokens")),
     }
 
     pasta.mkdir(parents=True, exist_ok=True)
@@ -248,6 +255,8 @@ def decidir(texto_estado: str, modelo: str, chave: str) -> dict:
         "respostas": [t["texto"] for t in tentativas],
         "chamadas_pagas": sum(not t["do_cache"] for t in tentativas),
         "custo_pago_agora": sum(t["custo_usd"] or 0 for t in tentativas if not t["do_cache"]),
+        "provedores": [t.get("provedor_respondeu") for t in tentativas],
+        "tokens_raciocinio": [t.get("tokens_raciocinio") for t in tentativas],
     }
 
 
@@ -343,3 +352,4 @@ def testar() -> None:
     else:
         print(f"-> válida: prob_subir = {r['prob_subir']}")
     print(f"Latência: {r['latencia_ms']:.0f} ms | custo: {r['custo_usd']} | chamadas pagas: {r['chamadas_pagas']}")
+    print(f"Provedor que respondeu: {r['provedores']} | tokens de raciocínio: {r['tokens_raciocinio']}")

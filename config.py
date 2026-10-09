@@ -116,6 +116,24 @@ LLM_URL = "https://openrouter.ai/api/v1/chat/completions"
 LLM_TIMEOUT_S = 120          # espera máxima por resposta
 LLM_TENTATIVAS_REDE = 3      # novas tentativas em erro de rede/servidor (não é a "nova tentativa" por resposta inválida)
 
+# Modelo escolhido (09/10/2026): qwen/qwen3-235b-a22b-2507 (pesos abertos, sem raciocínio,
+# lançado em 21/07/2025, treino até 30/06/2025). O nome em si fica no .env (LLM_MODELO).
+
+# Provedor FIXO. Modelos de pesos abertos são hospedados por vários provedores, com
+# compressões diferentes (fp4, fp8...) que podem mudar as respostas. Usamos a Alibaba,
+# criadora do Qwen. Sem troca automática: se ela cair, a chamada falha em vez de ir para outro lugar.
+# Docs: https://openrouter.ai/docs/features/provider-routing
+LLM_PROVEDOR = {
+    "order": ["alibaba"],
+    "allow_fallbacks": False,
+    "require_parameters": True,   # recusa provedor que ignoraria temperature/seed
+}
+
+# Raciocínio: None = não enviar o parâmetro (o Qwen3 2507 "instruct" não raciocina).
+# Para um modelo que raciocina, fixe o nível, por exemplo {"effort": "high"}.
+# Docs: https://openrouter.ai/docs/use-cases/reasoning-tokens
+LLM_RACIOCINIO = None
+
 # Onde ficam o pré-registro e o registro de falhas das APIs.
 ARQUIVO_PREREGISTRO = RAIZ / "PREREGISTRO.md"
 ARQUIVO_FALHAS_LLM = PASTA_RESULTADOS / "falhas_llm.csv"   # versionado: transparência sobre o que falhou
