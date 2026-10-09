@@ -161,14 +161,16 @@ pregao-das-ias/
 │       │   ├── historico.py     # avaliação extra em 2025
 │       │   └── __init__.py      # a etapa "python main.py ml"
 │       ├── baselines.py     # sempre_comprar
-│       ├── jev.py           #                                               (próxima etapa)
+│       ├── jev.py           # Jev via API oficial da TypeSafe (versão fixa jev-1.13.0)
+│       ├── api_comum.py     # cache, falhas e trava do pré-registro (Jev e LLM)
 │       └── llm.py           # LLM via API compatível com OpenRouter
 ├── tests/
 │   ├── test_sem_vazamento.py   # provas de que ninguém vê o futuro
 │   ├── test_ml.py              # testes das correções da revisão
 │   ├── test_avaliacao.py       # Brier, taxa histórica e comparações pré-registradas
 │   ├── test_estado.py          # texto do estado: formato, anonimização, sem gabarito
-│   └── test_llm.py             # LLM com API falsa: formato, cache, nova tentativa, falhas
+│   ├── test_llm.py             # LLM com API falsa: formato, cache, nova tentativa, falhas
+│   └── test_jev.py             # Jev com API falsa: formato da documentação, versão fixa, cache
 ├── dados/                   # CSVs baixados (fora do git)
 ├── resultados/
 │   ├── decisoes/            # decisoes_<modelo>.csv (VERSIONADOS no git)
@@ -191,7 +193,7 @@ pregao-das-ias/
 | Avaliação (Brier, comparações pareadas, custos, agentes aleatórios) | pronta e testada |
 | Plano de análise (`PREREGISTRO.md`) | registrado em 09/10/2026 |
 | `estado.py` (texto para Jev e LLM) | pronto e testado (formato a congelar no adendo do pré-registro) |
-| Jev | próxima etapa (implementar seguindo a documentação oficial, versão fixa `jev-1.13.0`) |
+| Jev | pronto e testado (falta o Adendo 2 do pré-registro) |
 | LLM | pronto e testado com API falsa (falta: chave, escolha do modelo e adendo do pré-registro) |
 
 ## Correções feitas na revisão dos scripts originais

@@ -4,8 +4,8 @@ Ponto de entrada do projeto. Rode no terminal, de dentro da pasta do projeto:
 
     python main.py baixar      # baixa preços e calcula indicadores (precisa de internet)
     python main.py ml          # decisões do ML e do baseline "sempre comprar"
-    python main.py jev         # decisões do Jev (próxima etapa)
-    python main.py llm         # decisões do LLM (próxima etapa)
+    python main.py jev         # decisões do Jev
+    python main.py llm         # decisões do LLM
     python main.py avaliar     # compara todos os modelos
     python main.py tudo        # todas as etapas, em ordem
 
@@ -13,7 +13,7 @@ Ponto de entrada do projeto. Rode no terminal, de dentro da pasta do projeto:
     python main.py estado         # EXTRA: mostra exemplos do texto enviado ao Jev e ao LLM
 
 Opções:
-    --teste     (só para llm) faz UMA pergunta num pregão antigo para testar chave e modelo.
+    --teste     (llm e jev) faz UMA pergunta num pregão antigo para testar chave e modelo.
     --refazer   recalcula TODOS os dias, apagando decisões já gravadas.
                 Cuidado: decisões já commitadas no git deixam de valer como prova.
 """
@@ -39,7 +39,13 @@ def etapa_ml(args) -> None:
 
 def etapa_jev(args) -> None:
     from src.modelos import jev
-    jev.rodar(refazer=args.refazer)
+    try:
+        if args.teste:
+            jev.testar()
+        else:
+            jev.rodar(refazer=args.refazer)
+    except jev.ErroDeConfiguracao as erro:
+        print(f"Etapa 'jev' não rodou: {erro}")
 
 
 def etapa_llm(args) -> None:
@@ -97,7 +103,7 @@ def main() -> None:
     parser.add_argument("--refazer", action="store_true",
                         help="recalcula todos os dias (apaga decisões já gravadas)")
     parser.add_argument("--teste", action="store_true",
-                        help="(só llm) faz UMA pergunta num pregão antigo, para testar chave e modelo")
+                        help="(llm e jev) faz UMA pergunta num pregão antigo, para testar chave e modelo")
     args = parser.parse_args()
 
     if args.etapa == "tudo":

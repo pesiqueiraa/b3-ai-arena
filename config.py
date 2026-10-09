@@ -108,6 +108,15 @@ SEMENTE = 42
 # Versão FIXA do Jev. Não use "jev-latest": ela muda sozinha e estraga a comparação.
 JEV_VERSAO = "jev-1.13.0"
 
+# API oficial da TypeSafe (https://docs.typesafe.ai/api.md, consultada em 09/10/2026).
+JEV_URL = "https://api.typesafe.ai/v1/systemone"
+JEV_TIMEOUT_S = 60
+JEV_TENTATIVAS_REDE = 3
+
+# Preço publicado em https://docs.typesafe.ai/models.md (09/10/2026): US$ 0,042 por milhão de
+# tokens de ENTRADA (a saída é grátis). A API não devolve o custo, então ele é calculado.
+JEV_PRECO_USD_POR_TOKEN = 0.042 / 1_000_000
+
 # O modelo do LLM vem do .env (LLM_MODELO). Temperatura 0 = sempre a resposta mais provável.
 LLM_TEMPERATURA = 0
 
@@ -137,3 +146,4 @@ LLM_RACIOCINIO = None
 # Onde ficam o pré-registro e o registro de falhas das APIs.
 ARQUIVO_PREREGISTRO = RAIZ / "PREREGISTRO.md"
 ARQUIVO_FALHAS_LLM = PASTA_RESULTADOS / "falhas_llm.csv"   # versionado: transparência sobre o que falhou
+ARQUIVO_FALHAS_JEV = PASTA_RESULTADOS / "falhas_jev.csv"

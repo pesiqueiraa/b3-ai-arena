@@ -34,6 +34,10 @@ assert not any("gabarito" in c for c in ESTADO_COLUNAS), "O gabarito não pode e
 
 ROTULO_ANONIMO = "Ação A"
 
+# A pergunta feita ao Jev e ao LLM. Fica aqui, junto do estado, para os dois receberem
+# exatamente o mesmo texto (regra 4). Registrada no PREREGISTRO.md (Adendo 1).
+PERGUNTA = "A ação vai fechar o próximo pregão acima do fechamento de hoje?"
+
 
 # ---------------------------------------------------------------------------
 # Formatação de números (padrão brasileiro: vírgula decimal)

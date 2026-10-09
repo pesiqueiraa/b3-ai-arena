@@ -21,7 +21,6 @@ https://openrouter.ai/docs/api-reference/chat-completion, .../use-cases/usage-ac
 .../features/web-search (consultadas em 09/10/2026).
 """
 
-import hashlib
 import json
 import os
 import re
@@ -32,6 +31,8 @@ import pandas as pd
 
 import config
 from src import dados, decisoes, estado
+from src.modelos import api_comum
+from src.modelos.api_comum import ErroDeAPI, ErroDeConfiguracao  # noqa: F401 (usados por main.py e testes)
 
 NOME = "llm"
 
@@ -42,7 +43,8 @@ NOME = "llm"
 
 PROMPT_VERSAO = "llm-prompt-v1"
 
-PERGUNTA = "A ação vai fechar o próximo pregão acima do fechamento de hoje?"
+# A pergunta é a mesma do Jev e mora em src/estado.py (regra 4).
+PERGUNTA = estado.PERGUNTA
 
 INSTRUCOES = (
     "Você vai receber um resumo dos indicadores de uma ação da bolsa brasileira (B3) "
@@ -54,14 +56,6 @@ CORRECAO = (
     "Sua resposta não seguiu o formato pedido. Responda APENAS com o JSON "
     "{\"prob_subir\": <número de 0 a 1>}, sem nenhum outro texto."
 )
-
-
-class ErroDeConfiguracao(Exception):
-    """Algo no .env ou no pré-registro impede a etapa de rodar."""
-
-
-class ErroDeAPI(Exception):
-    """A API não respondeu direito mesmo depois das novas tentativas de rede."""
 
 
 # ---------------------------------------------------------------------------
@@ -88,18 +82,8 @@ def carregar_configuracao() -> tuple[str, str]:
 
 
 def verificar_preregistro(modelo: str) -> None:
-    """
-    O PREREGISTRO.md manda congelar o modelo e o prompt ANTES da primeira chamada.
-    Aqui conferimos que os dois aparecem lá (entre crases), senão a etapa não roda.
-    """
-    texto = config.ARQUIVO_PREREGISTRO.read_text(encoding="utf-8")
-    faltando = [item for item in (modelo, PROMPT_VERSAO) if f"`{item}`" not in texto]
-    if faltando:
-        raise ErroDeConfiguracao(
-            "o PREREGISTRO.md ainda não registra " + " e ".join(f"`{f}`" for f in faltando)
-            + ". Escreva o adendo (modelo, versão do prompt e texto do prompt), faça o commit "
-            "e só então rode o LLM. Para só testar a chave e o modelo: python main.py llm --teste"
-        )
+    """O modelo e a versão do prompt precisam estar no PREREGISTRO.md antes da primeira chamada."""
+    api_comum.exigir_no_preregistro([modelo, PROMPT_VERSAO], "python main.py llm --teste")
 
 
 # ---------------------------------------------------------------------------
@@ -174,10 +158,6 @@ def _post(pedido: dict, chave: str) -> dict:
     return resposta.json()
 
 
-def _chave_do_cache(pedido: dict) -> str:
-    return hashlib.sha256(json.dumps(pedido, sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()
-
-
 def perguntar(mensagens: list[dict], modelo: str, chave: str) -> dict:
     """
     Faz UMA pergunta, usando o cache sempre que possível.
@@ -185,11 +165,10 @@ def perguntar(mensagens: list[dict], modelo: str, chave: str) -> dict:
     e se veio do cache.
     """
     pedido = montar_pedido(mensagens, modelo)
-    pasta = config.PASTA_CACHE / NOME
-    arquivo = pasta / f"{_chave_do_cache(pedido)}.json"
-    if arquivo.exists():
-        guardado = json.loads(arquivo.read_text(encoding="utf-8"))
-        return {**guardado["resultado"], "do_cache": True}
+    arquivo = api_comum.arquivo_do_cache(NOME, pedido)
+    guardado = api_comum.ler_cache(arquivo)
+    if guardado is not None:
+        return {**guardado, "do_cache": True}
 
     for tentativa in range(1, config.LLM_TENTATIVAS_REDE + 1):
         inicio = time.perf_counter()
@@ -219,13 +198,7 @@ def perguntar(mensagens: list[dict], modelo: str, chave: str) -> dict:
         "tokens_raciocinio": ((uso.get("completion_tokens_details") or {}).get("reasoning_tokens")),
     }
 
-    pasta.mkdir(parents=True, exist_ok=True)
-    arquivo.write_text(json.dumps({
-        "quando": datetime.now().isoformat(timespec="seconds"),
-        "pedido": pedido,
-        "resposta_bruta": bruto,
-        "resultado": resultado,
-    }, ensure_ascii=False, indent=2), encoding="utf-8")
+    api_comum.gravar_cache(arquivo, pedido, bruto, resultado)
     return {**resultado, "do_cache": False}
 
 
@@ -265,17 +238,11 @@ def decidir(texto_estado: str, modelo: str, chave: str) -> dict:
 # ---------------------------------------------------------------------------
 
 def carregar_falhas() -> pd.DataFrame:
-    if not config.ARQUIVO_FALHAS_LLM.exists():
-        return pd.DataFrame(columns=["data", "ticker"])
-    return pd.read_csv(config.ARQUIVO_FALHAS_LLM, parse_dates=["data"])
+    return api_comum.carregar_falhas(config.ARQUIVO_FALHAS_LLM)
 
 
 def registrar_falhas(novas: list[dict]) -> None:
-    if not novas:
-        return
-    tabela = pd.concat([carregar_falhas(), pd.DataFrame(novas)], ignore_index=True)
-    config.ARQUIVO_FALHAS_LLM.parent.mkdir(parents=True, exist_ok=True)
-    tabela.to_csv(config.ARQUIVO_FALHAS_LLM, index=False, date_format="%Y-%m-%d")
+    api_comum.registrar_falhas(config.ARQUIVO_FALHAS_LLM, novas)
 
 
 # ---------------------------------------------------------------------------
