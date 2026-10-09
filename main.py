@@ -9,6 +9,8 @@ Ponto de entrada do projeto. Rode no terminal, de dentro da pasta do projeto:
     python main.py avaliar     # compara todos os modelos
     python main.py tudo        # todas as etapas, em ordem
 
+    python main.py ml-historico   # EXTRA: avalia só o ML em 2025 (fora da comparação oficial)
+
 Opção:
     --refazer   recalcula TODOS os dias, apagando decisões já gravadas.
                 Cuidado: decisões já commitadas no git deixam de valer como prova.
@@ -48,6 +50,11 @@ def etapa_avaliar(args) -> None:
     avaliacao.rodar()
 
 
+def etapa_ml_historico(args) -> None:
+    from src.modelos.ml import historico
+    historico.rodar()
+
+
 ETAPAS = {
     "baixar": etapa_baixar,
     "ml": etapa_ml,
@@ -56,18 +63,23 @@ ETAPAS = {
     "avaliar": etapa_avaliar,
 }
 
+# Etapas extras: podem ser chamadas pelo nome, mas não entram no "tudo".
+EXTRAS = {
+    "ml-historico": etapa_ml_historico,
+}
+
 
 def rodar_etapa(nome: str, args) -> None:
     print(f"\n========== {nome.upper()} ==========")
     try:
-        ETAPAS[nome](args)
+        {**ETAPAS, **EXTRAS}[nome](args)
     except NotImplementedError as aviso:
         print(f"Etapa '{nome}' pulada: {aviso}")
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="O Pregão das IAs: Jev vs LLM vs ML na B3")
-    parser.add_argument("etapa", choices=[*ETAPAS, "tudo"], help="qual etapa rodar")
+    parser.add_argument("etapa", choices=[*ETAPAS, "tudo", *EXTRAS], help="qual etapa rodar")
     parser.add_argument("--refazer", action="store_true",
                         help="recalcula todos os dias (apaga decisões já gravadas)")
     args = parser.parse_args()

@@ -43,6 +43,13 @@ DATA_INICIO = "2024-01-01"
 # no treino dele: é a "janela limpa" do teste.
 DATA_CORTE_JEV = "2026-09-15"
 
+# Avaliação EXTRA, só do ML, num período longo (fora da comparação oficial).
+# Serve para saber se a acurácia do ML é a real dele ou ruído de poucos pregões.
+# Jev e LLM não entram aqui: esse período pode estar no treino deles.
+ML_HISTORICO_INICIO = "2025-01-01"
+ML_HISTORICO_FIM = "2025-12-31"
+PASTA_EXTRA_ML = RAIZ / "resultados" / "extra" / "ml_2025"
+
 # ---------------------------------------------------------------------------
 # Regras de decisão e de avaliação
 # ---------------------------------------------------------------------------

@@ -99,18 +99,21 @@ def rng_do_modelo(nome: str):
     return np.random.default_rng([config.SEMENTE, zlib.crc32(nome.encode("utf-8"))])
 
 
-def faltando_na_janela(decisoes: pd.DataFrame, gabarito: pd.DataFrame) -> int:
+def faltando_na_janela(decisoes: pd.DataFrame, gabarito: pd.DataFrame,
+                       esperado: pd.DataFrame | None = None) -> int:
     """
     CORREÇÃO: conta quantos pares (dia, ação) da janela limpa ficaram sem decisão.
     Antes, um modelo que pulasse dias era comparado em menos dias que os outros, sem aviso.
+    'esperado' permite usar outra janela (ex.: a avaliação extra do ML em 2025).
     """
-    esperado = gabarito.loc[gabarito["periodo"] == "teste_limpo", ["data", "ticker"]]
+    if esperado is None:
+        esperado = gabarito.loc[gabarito["periodo"] == "teste_limpo", ["data", "ticker"]]
     m = esperado.merge(decisoes[["data", "ticker"]], on=["data", "ticker"], how="left", indicator=True)
     return int((m["_merge"] == "left_only").sum())
 
 
 def avaliar_modelo(nome: str, decisoes: pd.DataFrame, gabarito: pd.DataFrame,
-                   bova: pd.Series, rng) -> dict:
+                   bova: pd.Series, rng, esperado: pd.DataFrame | None = None) -> dict:
     m = decisoes.merge(gabarito.drop(columns="periodo"), on=["data", "ticker"], how="inner")
     m = m.dropna(subset=["gabarito"])  # o último dia ainda não tem resposta
 
@@ -123,7 +126,7 @@ def avaliar_modelo(nome: str, decisoes: pd.DataFrame, gabarito: pd.DataFrame,
     return {
         "modelo": nome,
         "dias": len(com_custo),
-        "faltando": faltando_na_janela(decisoes, gabarito),
+        "faltando": faltando_na_janela(decisoes, gabarito, esperado),
         "compras_por_dia": len(compras) / max(len(com_custo), 1),
         "retorno_com_custos": acumulado(com_custo),
         "retorno_sem_custos": acumulado(sem_custo),

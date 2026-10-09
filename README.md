@@ -105,6 +105,9 @@ python main.py baixar     # baixa preços e calcula indicadores (precisa de inte
 python main.py ml         # decisões do ML e do "sempre comprar"
 python main.py avaliar    # tabela comparando todos os modelos
 python main.py tudo       # todas as etapas em ordem
+
+# Extra (fora da comparação oficial): avalia só o ML em 2025 inteiro
+python main.py ml-historico
 ```
 
 **Rotina diária:** depois das ~18h (pregão fechado e consolidado), rode
@@ -132,6 +135,7 @@ pregao-das-ias/
 │       │   ├── features.py      # o que o modelo pode ver (o gabarito nunca)
 │       │   ├── modelo.py        # imputação + normalização + regressão logística
 │       │   ├── walk_forward.py  # retreino diário só com o passado
+│       │   ├── historico.py     # avaliação extra em 2025
 │       │   └── __init__.py      # a etapa "python main.py ml"
 │       ├── baselines.py     # sempre_comprar
 │       ├── jev.py           #                                               (próxima etapa)
@@ -143,6 +147,7 @@ pregao-das-ias/
 ├── resultados/
 │   ├── decisoes/            # decisoes_<modelo>.csv (VERSIONADOS no git)
 │   ├── cache/               # respostas das APIs (fora do git)
+│   ├── extra/ml_2025/       # avaliação extra do ML em 2025 (fora da comparação oficial)
 │   └── resultado.csv        # última tabela de avaliação
 ├── requirements.txt
 ├── .env.example
@@ -178,6 +183,26 @@ com estas correções, todas cobertas por testes em `tests/test_ml.py`:
 4. **Acerto de direção recalculado a partir de um valor arredondado.** Agora usa a própria coluna
    `decisao`.
 5. **Decisões passaram a ser só de acréscimo** (veja "Por que as decisões são versionadas").
+
+## Avaliação extra do ML em 2025
+
+A janela limpa tem poucos pregões, então o ML também é avaliado em **2025 inteiro**
+(250 pregões, 4.000 decisões), com o mesmo walk-forward, os mesmos custos e o mesmo teste dos
+agentes aleatórios (`python main.py ml-historico`, resultados em `resultados/extra/ml_2025/`).
+Jev e LLM **não** entram aqui, porque 2025 pode estar no treino deles. Resultado:
+
+| | ML | Sempre comprar | BOVA11 |
+|---|---|---|---|
+| Acerto de direção | 49,8% (IC 95%: 48,2% a 51,3%) | 51,7% | – |
+| Retorno com custos | +18,6% | +27,1% | +34,4% |
+| Retorno sem custos | +36,2% | +27,1% | +34,4% |
+| Superou os agentes aleatórios | 65,9% | – | – |
+
+Conclusão: com estes indicadores, a regressão logística **não tem habilidade mensurável**
+para prever a direção do dia seguinte. A acurácia é indistinguível de 50%, as probabilidades
+não são melhores que a taxa histórica de altas (Brier 0,2511 contra 0,2507) e o giro diário faz os
+custos consumirem metade do ganho. É exatamente o papel de um baseline honesto: mostrar quanto
+um modelo "esperto" precisa superar para ser levado a sério.
 
 ## Limitações
 
