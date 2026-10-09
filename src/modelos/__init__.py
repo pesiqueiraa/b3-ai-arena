@@ -1,1 +1,1 @@
-"""Os modelos que tomam decisões: ml/, baselines, jev e llm."""
+"""Linha de produção de sinais (B3, swing trade)."""
