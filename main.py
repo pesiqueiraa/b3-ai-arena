@@ -1,0 +1,83 @@
+"""
+main.py
+Ponto de entrada do projeto. Rode no terminal, de dentro da pasta do projeto:
+
+    python main.py baixar      # baixa preços e calcula indicadores (precisa de internet)
+    python main.py ml          # decisões do ML e do baseline "sempre comprar"
+    python main.py jev         # decisões do Jev (próxima etapa)
+    python main.py llm         # decisões do LLM (próxima etapa)
+    python main.py avaliar     # compara todos os modelos
+    python main.py tudo        # todas as etapas, em ordem
+
+Opção:
+    --refazer   recalcula TODOS os dias, apagando decisões já gravadas.
+                Cuidado: decisões já commitadas no git deixam de valer como prova.
+"""
+
+import argparse
+import sys
+
+# Garante acentos corretos no terminal do Windows.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+
+
+def etapa_baixar(args) -> None:
+    from src import dados
+    dados.rodar()
+
+
+def etapa_ml(args) -> None:
+    from src.modelos import baselines, ml
+    ml.rodar(refazer=args.refazer)
+    baselines.rodar(refazer=args.refazer)
+
+
+def etapa_jev(args) -> None:
+    from src.modelos import jev
+    jev.rodar(refazer=args.refazer)
+
+
+def etapa_llm(args) -> None:
+    from src.modelos import llm
+    llm.rodar(refazer=args.refazer)
+
+
+def etapa_avaliar(args) -> None:
+    from src import avaliacao
+    avaliacao.rodar()
+
+
+ETAPAS = {
+    "baixar": etapa_baixar,
+    "ml": etapa_ml,
+    "jev": etapa_jev,
+    "llm": etapa_llm,
+    "avaliar": etapa_avaliar,
+}
+
+
+def rodar_etapa(nome: str, args) -> None:
+    print(f"\n========== {nome.upper()} ==========")
+    try:
+        ETAPAS[nome](args)
+    except NotImplementedError as aviso:
+        print(f"Etapa '{nome}' pulada: {aviso}")
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="O Pregão das IAs: Jev vs LLM vs ML na B3")
+    parser.add_argument("etapa", choices=[*ETAPAS, "tudo"], help="qual etapa rodar")
+    parser.add_argument("--refazer", action="store_true",
+                        help="recalcula todos os dias (apaga decisões já gravadas)")
+    args = parser.parse_args()
+
+    if args.etapa == "tudo":
+        for nome in ETAPAS:
+            rodar_etapa(nome, args)
+    else:
+        rodar_etapa(args.etapa, args)
+
+
+if __name__ == "__main__":
+    main()

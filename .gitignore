@@ -1,0 +1,23 @@
+# Segredos: chaves de API ficam só no .env
+.env
+
+# Ambiente virtual e arquivos temporários do Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Dados baixados: qualquer um recria com "python main.py baixar"
+dados/*
+!dados/.gitkeep
+
+# Respostas das APIs (cache): podem ser grandes e conter dados das contas
+resultados/cache/*
+!resultados/cache/.gitkeep
+
+# Editor / sistema
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

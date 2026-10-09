@@ -1,0 +1,19 @@
+# Versões fixas para o experimento ser reproduzível.
+# Instalar:  pip install -r requirements.txt
+
+# Dados e contas
+pandas==3.0.6
+numpy==2.5.3
+
+# Download dos preços (Yahoo Finance)
+yfinance==1.7.0
+
+# Modelo de ML
+scikit-learn==1.9.1
+
+# Testes
+pytest==9.1.1
+
+# Próximas etapas (Jev e LLM): ler o .env e chamar as APIs
+python-dotenv==1.2.4
+requests==2.34.2
