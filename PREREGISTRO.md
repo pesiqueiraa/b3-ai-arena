@@ -93,6 +93,67 @@ Acerto de direção, acerto das compras, retorno com e sem custos, retorno do BO
 período, pior queda e fração dos agentes aleatórios superada. Todas são relatadas, nenhuma
 decide o resultado.
 
+## Adendo 1: LLM (registrado em 09/10/2026, antes da primeira decisão do LLM)
+
+### Modelo e execução
+- **Modelo:** `qwen/qwen3-235b-a22b-2507` (Qwen3 235B A22B Instruct 2507), via OpenRouter.
+  Pesos abertos, lançado em 21/07/2025, dados de treino até 30/06/2025 (segundo a listagem do
+  OpenRouter). Cumpre a exigência do item 5: treino anterior a 15/09/2026.
+- **Provedor fixo:** Alibaba, sem troca automática e exigindo suporte a todos os parâmetros
+  (`provider` = `{"order": ["alibaba"], "allow_fallbacks": false, "require_parameters": true}`).
+- **Parâmetros:** temperatura 0, seed 42, sem raciocínio, sem busca na web
+  (sem `:online`, sem plugins e sem ferramentas).
+- **Resposta inválida:** uma nova tentativa com a mensagem de correção abaixo; se falhar de
+  novo, o par vai para `resultados/falhas_llm.csv` e fica fora das comparações (item 6).
+
+### Prompt: versão `llm-prompt-v1`
+Mensagem de sistema:
+```
+Você vai receber um resumo dos indicadores de uma ação da bolsa brasileira (B3) no fechamento de um pregão. Responda à pergunta com a probabilidade de a resposta ser "sim". Responda APENAS com um JSON no formato {"prob_subir": <número de 0 a 1>}, sem nenhum outro texto.
+```
+Mensagem do usuário (o estado vem de `src/estado.py`):
+```
+<estado>
+
+Pergunta: A ação vai fechar o próximo pregão acima do fechamento de hoje?
+```
+Mensagem de correção (só na nova tentativa, depois da resposta inválida do modelo):
+```
+Sua resposta não seguiu o formato pedido. Responda APENAS com o JSON {"prob_subir": <número de 0 a 1>}, sem nenhum outro texto.
+```
+
+### Estado
+- O experimento principal usa o estado **normal** (com ticker, nome da empresa e data), no
+  formato de `src/estado.py` deste commit. Exemplo:
+  > ABEV3 (Ambev), pregão de 08/10/2026. Retorno no último pregão: +1,1%. Retorno em 5 pregões:
+  > +5,1%. Retorno em 20 pregões: +3,1%. Preço 3,4% acima da média de 20 pregões. Oscilação
+  > diária típica nos últimos 20 pregões: 1,5%. Volume 2,3 vezes o normal.
+- A versão anonimizada ("Ação A") fica reservada ao teste de memorização, que terá
+  pré-registro próprio.
+- O Jev receberá exatamente o mesmo estado (regra 4). A pergunta e os parâmetros do Jev
+  serão registrados no Adendo 2, antes da primeira chamada do Jev.
+
+### Como o modelo foi escolhido
+Critérios: lançado antes de 15/09/2026, aceitar temperatura 0, responder sem raciocínio
+obrigatório, pesos abertos (o modelo não muda nem é desativado durante o experimento) e
+custo e tempo viáveis. Os candidatos foram testados com **uma única pergunta de 30/01/2024**
+(fora da janela limpa), repetida. **O desempenho preditivo não foi critério**: nenhum modelo foi
+avaliado na janela limpa antes deste registro.
+- `deepseek/deepseek-v4-pro`: rejeitado. Sempre raciocina; a mesma pergunta deu 0,42 num
+  provedor (24 s) e 0,60 em outro (10.143 tokens de raciocínio, 377 s).
+- `moonshotai/kimi-k2-0905`: rejeitado. A mesma pergunta deu 0,58 e 0,45.
+- `qwen/qwen3-235b-a22b-2507`: escolhido. 0,42 em todas as 5 chamadas, em 3 provedores, ~1,5 s,
+  US$ 0,00004 por pergunta.
+
+### Se algo mudar
+Se o modelo ou o provedor ficarem indisponíveis, o LLM fica pausado (sem troca silenciosa).
+A solução será registrada na seção "Desvios" antes de retomar.
+
+### Decisões retroativas
+As decisões do LLM de 15/09/2026 até a data da primeira execução serão calculadas
+retroativamente. O modelo é de 2025 e não pode ter visto esses pregões; a análise de
+sensibilidade do item 6 separa essas decisões das tomadas antes do fechamento do pregão seguinte.
+
 ## Desvios
 
 Nenhum até o momento.
