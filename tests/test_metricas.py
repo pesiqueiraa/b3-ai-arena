@@ -31,6 +31,10 @@ def test_acerto_de_compras_e_vendas():
     assert metricas.acerto_sinais(sinais, tabela, "venda") == 1.0
 
 
+def test_pior_queda_conta_perda_desde_o_capital_inicial():
+    assert metricas.pior_queda(pd.Series([-0.20, 0.0, 0.0])) == pytest.approx(-0.20)
+
+
 def test_resumo_da_carteira():
     dias = pd.to_datetime(["2023-06-01", "2023-06-02", "2024-06-03"])
     ret = pd.Series([0.10, -0.10, 0.05], index=dias)

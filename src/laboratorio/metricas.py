@@ -44,8 +44,11 @@ def acumulado(ret: pd.Series) -> float:
 
 
 def pior_queda(ret: pd.Series) -> float:
-    curva = (1 + ret).cumprod()
-    return float((curva / curva.cummax() - 1).min()) if len(curva) else float("nan")
+    if len(ret) == 0:
+        return float("nan")
+    # Começa do capital inicial (1,0), para contar uma perda já no primeiro dia.
+    curva = pd.concat([pd.Series([1.0]), (1 + ret).cumprod()], ignore_index=True)
+    return float((curva / curva.cummax() - 1).min())
 
 
 def resumo_carteira(ret: pd.Series, ret_bova: pd.Series) -> dict:
