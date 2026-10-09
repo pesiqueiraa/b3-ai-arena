@@ -60,8 +60,10 @@ main.py          python main.py atualizar | laboratorio | sinais | prova-final
 1. **Momento em que a informação ficou conhecida.** Toda informação carrega a data e a hora
    em que ficou pública. O sinal do dia D só usa o que era conhecido até o fechamento de D
    (17h). Um documento publicado depois das 17h de D conta para D+1.
-2. **Peças conversam por tabelas com colunas fixas.** As features entregam ao combinador uma
-   tabela no formato longo (`data, ticker, feature, valor`). Trocar uma peça não quebra as outras.
+2. **Peças conversam por tabelas com colunas fixas.** Toda tabela de features tem as colunas-chave
+   `data, ticker` e uma coluna por feature, com prefixo da peça que a produziu (`p_` para preço;
+   na etapa 3, `t_` para textos). O combinador junta as tabelas pelas colunas-chave. Trocar uma
+   peça não quebra as outras.
 3. **O que custa dinheiro é guardado e versionado** (respostas de LLM e Jev, a partir da etapa 3).
    O que é grátis (preços) é baixado de novo.
 4. **Nada vira sinal sem passar pelo laboratório.** Uma peça nova só entra se melhorar o
@@ -98,8 +100,9 @@ positivo (seção 9).
   pode ler esse período.
 
 ### 4.3 Armazenamento
-- `dados/b3/` e `dados/yahoo/`: arquivos brutos (fora do git).
-- `dados/processados/`: tabelas prontas em CSV compactado (`.csv.gz`, fora do git).
+- `dados/b3/`: arquivos brutos da B3 (fora do git).
+- `dados/processados/`: tabelas prontas em CSV compactado (`.csv.gz`, fora do git): ações da B3,
+  preços ajustados do Yahoo e o calendário de pregões.
 - `resultados/universo/universo_mensal.csv`: a lista de cada mês (no git).
 - `resultados/laboratorio/`: relatórios (no git).
 
@@ -208,13 +211,14 @@ Para cada dia D:
 - `arquivo/experimento_jev_llm_ml/` recebe o experimento: decisões, resultados, `PREREGISTRO.md`
   e um README curto. O **Desvio 2** registra o encerramento em 09/10/2026, com 17 pregões e sem
   conclusões.
-- **Migram para a estrutura nova, com os testes:**
-  - `api_comum.py`, `jev.py`, `llm.py` e `estado.py`, para uso na etapa 3;
-  - a lógica de walk-forward e imputação;
-  - o teste dos agentes aleatórios;
-  - `decisoes.py`, ou o equivalente para sinais.
-- **Saem da pasta ativa** (ficam no arquivo): `baselines.py`, as comparações pré-registradas e
-  a avaliação diária do experimento.
+- **Na etapa 1, o experimento inteiro vai para o arquivo** (código, testes, resultados e
+  `PREREGISTRO.md`) como uma cópia completa.
+- **Reaproveitado agora, reescrito na estrutura nova e com testes novos:** o download do Yahoo
+  (com a remoção de pregões incompletos), o walk-forward com imputação e o teste dos agentes
+  aleatórios.
+- **`api_comum.py`, `jev.py`, `llm.py` e `estado.py` voltam do arquivo na etapa 3,** quando
+  houver textos para eles. Trazê-los agora deixaria na pasta ativa código sem uso, dependendo de
+  módulos que saíram.
 
 ## 11. Erros e casos-limite
 
@@ -226,7 +230,11 @@ Para cada dia D:
   treino, o rótulo fica vazio e a linha sai; na simulação, a posição é encerrada no último preço
   disponível.
 - **Ação com o mesmo ticker reaproveitado por outra empresa:** detectada pela troca de nome do
-  emissor no COTAHIST. Os dois períodos ficam como séries separadas.
+  emissor no COTAHIST e listada em `resultados/universo/tickers_com_troca_de_nome.csv`. O Yahoo
+  não separa os dois períodos, então a etapa 1 só **relata** os casos. Se algum for relevante,
+  vira um ajuste específico.
+- **Calendário de pregões:** é a união das datas do COTAHIST com as datas do BOVA11 no Yahoo.
+  Isso cobre o caso de o arquivo anual da B3 do ano corrente atrasar alguns dias.
 
 ## 12. Riscos abertos
 
