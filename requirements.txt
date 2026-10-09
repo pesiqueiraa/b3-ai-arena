@@ -11,6 +11,9 @@ yfinance==1.7.0
 # Modelo de ML
 scikit-learn==1.9.1
 
+# Intervalos de confiança das comparações
+scipy==1.18.1
+
 # Testes
 pytest==9.1.1
 

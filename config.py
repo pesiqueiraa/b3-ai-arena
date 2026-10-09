@@ -20,6 +20,7 @@ PASTA_RESULTADOS = RAIZ / "resultados"
 PASTA_DECISOES = PASTA_RESULTADOS / "decisoes"    # decisoes_<modelo>.csv (versionados no git)
 PASTA_CACHE = PASTA_RESULTADOS / "cache"          # respostas das APIs (fora do git)
 ARQUIVO_RESULTADO = PASTA_RESULTADOS / "resultado.csv"
+ARQUIVO_COMPARACOES = PASTA_RESULTADOS / "comparacoes.csv"
 
 # ---------------------------------------------------------------------------
 # Ações e datas
@@ -59,6 +60,30 @@ LIMIAR_COMPRA = 0.5
 
 # Custo por lado de cada operação, como fração do valor (0,0005 = 0,05%).
 CUSTO_POR_LADO = 0.0005
+
+# ---------------------------------------------------------------------------
+# Plano de análise (detalhes e justificativas no PREREGISTRO.md)
+# Não mude estes valores depois que Jev e LLM começarem a rodar.
+# ---------------------------------------------------------------------------
+
+# A análise final só acontece quando a janela limpa tiver este número de pregões
+# com resultado (~1 ano a partir de 15/09/2026). Antes disso, tudo é "parcial".
+PREGOES_MINIMOS = 250
+
+# O modelo de controle (o ML, congelado como está).
+MODELO_CONTROLE = "ml"
+
+# Comparações de Brier (A, B). As PRINCIPAIS respondem à pergunta do projeto e usam
+# intervalo de 97,5% (correção de Bonferroni: são 2 testes principais).
+# As SECUNDÁRIAS usam 95% e são só descritivas. Todo modelo também é comparado
+# com a taxa histórica de altas ("taxa_historica"), como comparação secundária.
+COMPARACOES_PRINCIPAIS = [("jev", "ml"), ("jev", "llm")]
+COMPARACOES_SECUNDARIAS = [("llm", "ml")]
+CONFIANCA_PRINCIPAL = 0.975
+CONFIANCA_SECUNDARIA = 0.95
+
+# Baselines que não dão probabilidade de verdade (ficam fora das comparações de Brier).
+MODELOS_SEM_PROBABILIDADE = ["sempre_comprar"]
 
 # Quantos agentes aleatórios usar no teste contra a sorte.
 N_ALEATORIOS = 1000

@@ -45,6 +45,10 @@ A tarefa é sempre a mesma: no fechamento de cada pregão, para cada ação, res
   fica com elas até o fechamento de D+1. Sem compras, fica em caixa (retorno zero).
 - **Custos:** **0,05% por lado** (compra ou venda) sobre o que mudou na carteira de um dia para o
   outro. Trocar a carteira inteira custa 0,10%.
+- **Métrica principal: Brier**, o erro médio da probabilidade (menor é melhor). A promessa do
+  Jev é probabilidade calibrada, e é isso que o Brier mede. As comparações são pareadas por dia,
+  com intervalo de confiança, e a análise final só acontece com **250 pregões** (~setembro de 2027).
+  Tudo isso está fixado antes do resultado no **[PREREGISTRO.md](PREREGISTRO.md)**.
 - **Teste contra a sorte:** 1.000 agentes aleatórios que, a cada dia, compram o **mesmo número**
   de ações que o modelo, só que sorteadas. A métrica `bateu_aleatorios` diz que fração deles o
   modelo superou. Perto de 50% é sorte; só acima de ~95% começa a sugerir habilidade.
@@ -103,7 +107,7 @@ python -m pytest
 # 6. Rode as etapas
 python main.py baixar     # baixa preços e calcula indicadores (precisa de internet)
 python main.py ml         # decisões do ML e do "sempre comprar"
-python main.py avaliar    # tabela comparando todos os modelos
+python main.py avaliar    # tabela e comparações pré-registradas entre os modelos
 python main.py tudo       # todas as etapas em ordem
 
 # Extra (fora da comparação oficial): avalia só o ML em 2025 inteiro
@@ -142,13 +146,16 @@ pregao-das-ias/
 │       └── llm.py           #                                               (próxima etapa)
 ├── tests/
 │   ├── test_sem_vazamento.py   # provas de que ninguém vê o futuro
-│   └── test_ml.py              # testes das correções da revisão
+│   ├── test_ml.py              # testes das correções da revisão
+│   └── test_avaliacao.py       # Brier, taxa histórica e comparações pré-registradas
 ├── dados/                   # CSVs baixados (fora do git)
 ├── resultados/
 │   ├── decisoes/            # decisoes_<modelo>.csv (VERSIONADOS no git)
 │   ├── cache/               # respostas das APIs (fora do git)
 │   ├── extra/ml_2025/       # avaliação extra do ML em 2025 (fora da comparação oficial)
-│   └── resultado.csv        # última tabela de avaliação
+│   ├── resultado.csv        # última tabela de avaliação
+│   └── comparacoes.csv      # comparações de Brier do PREREGISTRO.md
+├── PREREGISTRO.md           # plano de análise fixado antes dos resultados
 ├── requirements.txt
 ├── .env.example
 └── README.md
@@ -160,7 +167,8 @@ pregao-das-ias/
 |---|---|
 | Download e indicadores | pronto |
 | ML (walk-forward) e "sempre comprar" | pronto e testado |
-| Avaliação (custos + agentes aleatórios) | pronta e testada |
+| Avaliação (Brier, comparações pareadas, custos, agentes aleatórios) | pronta e testada |
+| Plano de análise (`PREREGISTRO.md`) | registrado em 09/10/2026 |
 | `estado.py` (texto para Jev e LLM) | próxima etapa |
 | Jev | próxima etapa (implementar seguindo a documentação oficial, versão fixa `jev-1.13.0`) |
 | LLM | próxima etapa |
@@ -193,6 +201,7 @@ Jev e LLM **não** entram aqui, porque 2025 pode estar no treino deles. Resultad
 
 | | ML | Sempre comprar | BOVA11 |
 |---|---|---|---|
+| Brier (menor é melhor; taxa histórica = 0,2507) | 0,2511 | – | – |
 | Acerto de direção | 49,8% (IC 95%: 48,2% a 51,3%) | 51,7% | – |
 | Retorno com custos | +18,6% | +27,1% | +34,4% |
 | Retorno sem custos | +36,2% | +27,1% | +34,4% |

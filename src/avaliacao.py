@@ -112,10 +112,84 @@ def faltando_na_janela(decisoes: pd.DataFrame, gabarito: pd.DataFrame,
     return int((m["_merge"] == "left_only").sum())
 
 
+# ---------------------------------------------------------------------------
+# Métrica principal: Brier (ver PREREGISTRO.md)
+# ---------------------------------------------------------------------------
+
+def prob_referencia(gabarito: pd.DataFrame) -> pd.Series:
+    """
+    A probabilidade "boba", por dia: a fração de altas vista no histórico até a VÉSPERA.
+    No dia D, usa os gabaritos até D-1 (o de D-1 é o retorno de D-1 para D, já conhecido
+    no fechamento de D). Qualquer modelo com probabilidade útil precisa bater isto.
+    """
+    conhecidos = gabarito.dropna(subset=["gabarito"])
+    por_dia = (conhecidos["gabarito"] > 0).groupby(conhecidos["data"]).agg(["sum", "count"]).cumsum()
+    taxa_ate_o_dia = por_dia["sum"] / por_dia["count"]
+    # Dias sem gabarito ainda (o mais recente) repetem a última taxa conhecida;
+    # depois, shift(1): no dia D, só vale o que já era conhecido até D-1.
+    todos_os_dias = pd.Index(sorted(gabarito["data"].unique()))
+    return taxa_ate_o_dia.reindex(todos_os_dias).ffill().shift(1)
+
+
+def brier(prob: pd.Series, subiu: pd.Series) -> float:
+    """Erro quadrático médio da probabilidade: 0 = perfeito, 0,25 = sempre dizer 50%. Menor é melhor."""
+    return float(((prob - subiu) ** 2).mean())
+
+
+def _com_resultado(decisoes: pd.DataFrame, gabarito: pd.DataFrame) -> pd.DataFrame:
+    m = decisoes.merge(gabarito.drop(columns="periodo"), on=["data", "ticker"], how="inner")
+    return m.dropna(subset=["gabarito"])  # o último dia ainda não tem resposta
+
+
+def comparar_brier(decisoes_a: pd.DataFrame, decisoes_b: pd.DataFrame, gabarito: pd.DataFrame,
+                   confianca: float = 0.95) -> dict:
+    """
+    Compara o Brier de A contra o de B nos MESMOS pares (dia, ação), como definido no PREREGISTRO.md.
+
+    As ações sobem e caem juntas, então decisões do mesmo dia não são independentes.
+    Por isso o teste é feito por DIA: para cada pregão, a diferença média de Brier (A - B);
+    depois, a média dessas diferenças e um intervalo de confiança (t de Student) entre os dias.
+    dif_media < 0 quer dizer que A errou menos que B.
+    """
+    from scipy import stats
+
+    a = _com_resultado(decisoes_a, gabarito)
+    b = decisoes_b[["data", "ticker", "prob_subir"]].rename(columns={"prob_subir": "prob_b"})
+    m = a.merge(b, on=["data", "ticker"], how="inner")
+    subiu = (m["gabarito"] > 0).astype(int)
+    dif_por_dia = ((m["prob_subir"] - subiu) ** 2 - (m["prob_b"] - subiu) ** 2).groupby(m["data"]).mean()
+
+    n = len(dif_por_dia)
+    media = float(dif_por_dia.mean()) if n else float("nan")
+    if n >= 2:
+        margem = float(stats.t.ppf(1 - (1 - confianca) / 2, n - 1) * dif_por_dia.std(ddof=1) / np.sqrt(n))
+    else:
+        margem = float("nan")
+    return {"dias": n, "pares": len(m), "confianca": confianca, "dif_media": media,
+            "ic_baixo": media - margem, "ic_alto": media + margem}
+
+
+def veredito(comparacao: dict) -> str:
+    """Aplica o critério de vitória do PREREGISTRO.md a uma comparação A vs B."""
+    if comparacao["dias"] < config.PREGOES_MINIMOS:
+        return f"parcial ({comparacao['dias']} de {config.PREGOES_MINIMOS} pregões)"
+    if comparacao["ic_alto"] < 0:
+        return "A melhor que B"
+    if comparacao["ic_baixo"] > 0:
+        return "B melhor que A"
+    return "empate (sem diferença detectável)"
+
+
+# ---------------------------------------------------------------------------
+# Todas as métricas de um modelo
+# ---------------------------------------------------------------------------
+
 def avaliar_modelo(nome: str, decisoes: pd.DataFrame, gabarito: pd.DataFrame,
                    bova: pd.Series, rng, esperado: pd.DataFrame | None = None) -> dict:
-    m = decisoes.merge(gabarito.drop(columns="periodo"), on=["data", "ticker"], how="inner")
-    m = m.dropna(subset=["gabarito"])  # o último dia ainda não tem resposta
+    m = _com_resultado(decisoes, gabarito)
+    subiu = (m["gabarito"] > 0).astype(int)
+    prob_ref = m["data"].map(prob_referencia(gabarito))
+    brier_modelo, brier_ref = brier(m["prob_subir"], subiu), brier(prob_ref, subiu)
 
     com_custo, sem_custo = curva_da_carteira(m)
     compras = m[m["decisao"] == "comprar"]
@@ -127,6 +201,9 @@ def avaliar_modelo(nome: str, decisoes: pd.DataFrame, gabarito: pd.DataFrame,
         "modelo": nome,
         "dias": len(com_custo),
         "faltando": faltando_na_janela(decisoes, gabarito, esperado),
+        # Métrica principal. habilidade_brier > 0 = probabilidades melhores que a taxa histórica.
+        "brier": brier_modelo,
+        "habilidade_brier": 1 - brier_modelo / brier_ref if len(m) else float("nan"),
         "compras_por_dia": len(compras) / max(len(com_custo), 1),
         "retorno_com_custos": acumulado(com_custo),
         "retorno_sem_custos": acumulado(sem_custo),
@@ -138,25 +215,58 @@ def avaliar_modelo(nome: str, decisoes: pd.DataFrame, gabarito: pd.DataFrame,
     }
 
 
+def decisoes_de_referencia(decisoes: pd.DataFrame, gabarito: pd.DataFrame) -> pd.DataFrame:
+    """A probabilidade "boba" (taxa histórica de altas) nos mesmos pares de um modelo."""
+    ref = decisoes[["data", "ticker"]].copy()
+    ref["prob_subir"] = ref["data"].map(prob_referencia(gabarito))
+    return ref
+
+
+def comparacoes_preregistradas(todas: dict[str, pd.DataFrame], gabarito: pd.DataFrame) -> pd.DataFrame:
+    """Roda as comparações do PREREGISTRO.md (só as dos modelos que já existem)."""
+    pares = [(a, b, "principal", config.CONFIANCA_PRINCIPAL) for a, b in config.COMPARACOES_PRINCIPAIS]
+    pares += [(a, b, "secundaria", config.CONFIANCA_SECUNDARIA) for a, b in config.COMPARACOES_SECUNDARIAS]
+    pares += [(nome, "taxa_historica", "secundaria", config.CONFIANCA_SECUNDARIA)
+              for nome in todas if nome not in config.MODELOS_SEM_PROBABILIDADE]
+
+    linhas = []
+    for a, b, tipo, confianca in pares:
+        if a not in todas or (b not in todas and b != "taxa_historica"):
+            continue  # modelo ainda não rodou
+        dec_b = decisoes_de_referencia(todas[a], gabarito) if b == "taxa_historica" else todas[b]
+        c = comparar_brier(todas[a], dec_b, gabarito, confianca)
+        linhas.append({"tipo": tipo, "modelo_a": a, "modelo_b": b, **c, "veredito": veredito(c)})
+    return pd.DataFrame(linhas)
+
+
 def rodar() -> None:
     gabarito, bova = carregar_gabarito()
     arquivos = sorted(config.PASTA_DECISOES.glob("decisoes_*.csv"))
     if not arquivos:
         raise SystemExit("Nenhum resultados/decisoes/decisoes_*.csv encontrado. Rode antes: python main.py ml")
 
-    linhas = []
+    todas, linhas = {}, []
     for arquivo in arquivos:
         nome = arquivo.stem.replace("decisoes_", "")
-        decisoes = pd.read_csv(arquivo, parse_dates=["data"])
-        linhas.append(avaliar_modelo(nome, decisoes, gabarito, bova, rng_do_modelo(nome)))
+        todas[nome] = pd.read_csv(arquivo, parse_dates=["data"])
+        linhas.append(avaliar_modelo(nome, todas[nome], gabarito, bova, rng_do_modelo(nome)))
 
-    tabela = pd.DataFrame(linhas).sort_values("retorno_com_custos", ascending=False)
+    # Ordem pela métrica principal (Brier: menor é melhor).
+    tabela = pd.DataFrame(linhas).sort_values("brier")
     config.PASTA_RESULTADOS.mkdir(exist_ok=True)
     tabela.to_csv(config.ARQUIVO_RESULTADO, index=False, float_format="%.6f")
+    comparacoes = comparacoes_preregistradas(todas, gabarito)
+    comparacoes.to_csv(config.ARQUIVO_COMPARACOES, index=False, float_format="%.6f")
+
+    dias = int(tabela["dias"].max())
+    situacao = "FINAL" if dias >= config.PREGOES_MINIMOS else "PARCIAL (não conclusivo)"
+    print(f"Pregões com resultado: {dias} de {config.PREGOES_MINIMOS} previstos no PREREGISTRO.md "
+          f"-> resultado {situacao}\n")
 
     # Impressão amigável, em porcentagem.
     exibir = tabela.copy()
     formatos = {
+        "brier": "{:.4f}", "habilidade_brier": "{:+.2%}",
         "retorno_com_custos": "{:+.1%}", "retorno_sem_custos": "{:+.1%}", "retorno_bova11": "{:+.1%}",
         "pior_queda": "{:.1%}",
         "acerto_das_compras": "{:.0%}", "acerto_de_direcao": "{:.0%}", "bateu_aleatorios": "{:.0%}",
@@ -165,19 +275,31 @@ def rodar() -> None:
         exibir[col] = exibir[col].map(lambda v, fmt=fmt: "-" if pd.isna(v) else fmt.format(v))
     exibir["compras_por_dia"] = exibir["compras_por_dia"].map(lambda v: f"{v:.1f}")
 
+    print("MÉTRICA PRINCIPAL: brier (menor é melhor) | habilidade_brier > 0 = melhor que a taxa histórica")
     print(exibir.to_string(index=False))
-    print(f"\nTabela completa salva em {config.ARQUIVO_RESULTADO.relative_to(config.RAIZ)}")
+
+    if not comparacoes.empty:
+        print("\nComparações pré-registradas (diferença de Brier A - B por dia; negativo = A melhor):")
+        mostrar = comparacoes.copy()
+        mostrar["dif_media"] = mostrar["dif_media"].map("{:+.4f}".format)
+        mostrar["intervalo"] = [f"{c:.1%}: [{b:+.4f}, {a:+.4f}]"
+                                for c, b, a in zip(comparacoes["confianca"], comparacoes["ic_baixo"], comparacoes["ic_alto"])]
+        print(mostrar[["tipo", "modelo_a", "modelo_b", "dias", "dif_media", "intervalo", "veredito"]].to_string(index=False))
+
+    print(f"\nTabelas salvas em {config.ARQUIVO_RESULTADO.relative_to(config.RAIZ)} "
+          f"e {config.ARQUIVO_COMPARACOES.relative_to(config.RAIZ)}")
 
     incompletos = tabela[tabela["faltando"] > 0]
     for _, linha in incompletos.iterrows():
         print(f"\nAtenção: '{linha['modelo']}' não decidiu {linha['faltando']} par(es) (dia, ação) "
-              "da janela limpa. A comparação com os outros modelos fica desigual.")
+              "da janela limpa. As comparações usam só os pares que os dois modelos decidiram.")
 
-    dias = int(tabela["dias"].max())
     print("\nComo ler:")
+    print("  brier = erro médio da probabilidade. 0,25 é o que dá dizer sempre 50%.")
+    print("  O 'sempre_comprar' diz 100% em tudo, então o Brier dele é ruim de propósito: não é um")
+    print("  modelo de probabilidade, e por isso fica fora das comparações.")
     print("  bateu_aleatorios = % de agentes que escolhem ações ao acaso que o modelo superou.")
     print("  Perto de 50% é o que se espera de pura sorte; só acima de ~95% começa a sugerir habilidade.")
-    print("  Com poucos pregões, um único dia muito bom pode, sozinho, empurrar esse número para cima.")
-    if dias < 60:
-        print(f"\nAtenção: são só {dias} pregões. Com tão poucos dias, qualquer diferença ainda é")
-        print("principalmente ruído. Continue rodando todo dia para acumular resultados.")
+    if situacao != "FINAL":
+        print(f"\nAtenção: com {dias} pregões, nenhuma diferença é conclusiva. O PREREGISTRO.md fixa a")
+        print(f"análise final em {config.PREGOES_MINIMOS} pregões. Até lá, os números são só acompanhamento.")

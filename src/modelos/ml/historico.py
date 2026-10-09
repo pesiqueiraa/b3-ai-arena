@@ -28,11 +28,6 @@ def intervalo_95(acertos: int, total: int) -> tuple[float, float]:
     return p - margem, p + margem
 
 
-def brier(prob: pd.Series, subiu: pd.Series) -> float:
-    """Erro quadrático médio da probabilidade (0 = perfeito; menor é melhor)."""
-    return float(((prob - subiu) ** 2).mean())
-
-
 def rodar() -> None:
     df = dados.carregar_indicadores()
     df = df[df["ticker"] != config.REFERENCIA].copy()
@@ -67,13 +62,10 @@ def rodar() -> None:
     baixo, alto = intervalo_95(int(acertou.sum()), len(m))
     taxa_base = subiu.mean()
 
-    # Probabilidade "boba": sempre a fração de altas vista no treino até a véspera.
+    # Probabilidade "boba": a fração de altas vista no histórico até a véspera.
     # Se o ML não tiver Brier menor que isto, as probabilidades dele não acrescentam nada.
-    altas_dia = df.dropna(subset=["gabarito_retorno_amanha"]).assign(
-        s=lambda x: (x["gabarito_retorno_amanha"] > 0).astype(int)
-    ).groupby("data")["s"].agg(["sum", "count"]).cumsum()
-    base_ate_vespera = (altas_dia["sum"] / altas_dia["count"]).shift(1)
-    prob_boba = m["data"].map(base_ate_vespera)
+    ref = avaliacao.decisoes_de_referencia(decisoes_ml, gabarito)
+    comparacao = avaliacao.comparar_brier(decisoes_ml, ref, gabarito)
 
     # Robustez: quanto do retorno sobra sem o melhor dia?
     com_custo, _ = avaliacao.curva_da_carteira(m)
@@ -97,15 +89,21 @@ def rodar() -> None:
     for col in ["acerto_das_compras", "acerto_de_direcao", "bateu_aleatorios"]:
         exibir[col] = exibir[col].map(lambda v: "-" if pd.isna(v) else f"{v:.1%}")
     exibir["pior_queda"] = exibir["pior_queda"].map("{:.1%}".format)
+    exibir["brier"] = exibir["brier"].map("{:.4f}".format)
+    exibir["habilidade_brier"] = exibir["habilidade_brier"].map("{:+.2%}".format)
     exibir["compras_por_dia"] = exibir["compras_por_dia"].map("{:.1f}".format)
     print("\n" + exibir.to_string(index=False))
 
     print(f"\nAcerto de direção do ML: {acertou.mean():.1%} em {len(m)} decisões "
           f"(intervalo de 95%: {baixo:.1%} a {alto:.1%})")
     print(f"Fração de ações que subiram no dia seguinte (quem 'compra tudo' acerta isso): {taxa_base:.1%}")
-    print(f"Brier do ML: {brier(m['prob_subir'], subiu):.4f}  |  "
-          f"Brier da probabilidade 'boba' (taxa histórica de altas): {brier(prob_boba, subiu):.4f}  "
+    prob_boba = m["data"].map(avaliacao.prob_referencia(gabarito))
+    print(f"Brier do ML: {avaliacao.brier(m['prob_subir'], subiu):.4f}  |  "
+          f"Brier da probabilidade 'boba' (taxa histórica de altas): {avaliacao.brier(prob_boba, subiu):.4f}  "
           "(menor é melhor)")
+    print(f"Diferença por dia (ML - taxa histórica): {comparacao['dif_media']:+.4f}, "
+          f"intervalo de 95%: [{comparacao['ic_baixo']:+.4f}, {comparacao['ic_alto']:+.4f}] "
+          "(negativo = ML melhor; se o intervalo cruza o zero, não há diferença detectável)")
     print(f"Retorno do ML com custos sem o seu melhor dia ({com_custo.idxmax():%d/%m/%Y}): {sem_melhor_dia:+.1%}")
 
     print("\nPor mês:")

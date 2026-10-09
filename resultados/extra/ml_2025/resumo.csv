@@ -1,3 +1,3 @@
-modelo,dias,faltando,compras_por_dia,retorno_com_custos,retorno_sem_custos,retorno_bova11,acerto_das_compras,acerto_de_direcao,pior_queda,bateu_aleatorios
-ml,250,0,3.672000,0.186229,0.361616,0.343805,0.532680,0.497500,-0.107826,0.659000
-sempre_comprar,250,0,16.000000,0.270675,0.271318,0.343805,0.517500,0.517500,-0.077329,
+modelo,dias,faltando,brier,habilidade_brier,compras_por_dia,retorno_com_custos,retorno_sem_custos,retorno_bova11,acerto_das_compras,acerto_de_direcao,pior_queda,bateu_aleatorios
+ml,250,0,0.251138,-0.001833,3.672000,0.186229,0.361616,0.343805,0.532680,0.497500,-0.107826,0.659000
+sempre_comprar,250,0,0.482500,-0.924774,16.000000,0.270675,0.271318,0.343805,0.517500,0.517500,-0.077329,

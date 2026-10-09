@@ -1,0 +1,2 @@
+tipo,modelo_a,modelo_b,dias,pares,confianca,dif_media,ic_baixo,ic_alto,veredito
+secundaria,ml,taxa_historica,17,272,0.950000,0.001882,-0.001612,0.005375,parcial (17 de 250 pregões)
