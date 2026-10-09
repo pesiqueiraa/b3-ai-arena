@@ -10,6 +10,7 @@ Ponto de entrada do projeto. Rode no terminal, de dentro da pasta do projeto:
     python main.py tudo        # todas as etapas, em ordem
 
     python main.py ml-historico   # EXTRA: avalia só o ML em 2025 (fora da comparação oficial)
+    python main.py estado         # EXTRA: mostra exemplos do texto enviado ao Jev e ao LLM
 
 Opção:
     --refazer   recalcula TODOS os dias, apagando decisões já gravadas.
@@ -50,6 +51,11 @@ def etapa_avaliar(args) -> None:
     avaliacao.rodar()
 
 
+def etapa_estado(args) -> None:
+    from src import estado
+    estado.rodar()
+
+
 def etapa_ml_historico(args) -> None:
     from src.modelos.ml import historico
     historico.rodar()
@@ -66,6 +72,7 @@ ETAPAS = {
 # Etapas extras: podem ser chamadas pelo nome, mas não entram no "tudo".
 EXTRAS = {
     "ml-historico": etapa_ml_historico,
+    "estado": etapa_estado,
 }
 
 

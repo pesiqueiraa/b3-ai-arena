@@ -33,6 +33,15 @@ TICKERS = [
     "BOVA11",
 ]
 
+# Nome das empresas, usado no estado em texto enviado ao Jev e ao LLM (src/estado.py).
+NOMES_EMPRESAS = {
+    "PETR4": "Petrobras", "VALE3": "Vale", "ITUB4": "Itaú Unibanco", "BBDC4": "Bradesco",
+    "BBAS3": "Banco do Brasil", "ABEV3": "Ambev", "WEGE3": "WEG", "B3SA3": "B3",
+    "RENT3": "Localiza", "SUZB3": "Suzano", "PRIO3": "PRIO", "RADL3": "Raia Drogasil",
+    "EQTL3": "Equatorial", "GGBR4": "Gerdau", "LREN3": "Lojas Renner", "VIVT3": "Vivo",
+    "BOVA11": "ETF do Ibovespa",
+}
+
 # BOVA11 é o ETF do Ibovespa: a régua de "comprar e segurar".
 # Ele é baixado, mas NÃO é uma ação que os modelos podem escolher.
 REFERENCIA = "BOVA11"

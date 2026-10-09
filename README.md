@@ -37,7 +37,13 @@ A tarefa é sempre a mesma: no fechamento de cada pregão, para cada ação, res
   Esses dias não podiam estar no treino de nenhum dos modelos de linguagem.
 - **Mesmas informações para todos:** retornos de 1, 5 e 20 pregões, distância da média de
   20 pregões, volatilidade e volume relativo. Tudo calculado **só com o passado**.
-  O Jev e o LLM recebem exatamente o mesmo texto, gerado por `src/estado.py`.
+  O Jev e o LLM recebem exatamente o mesmo texto, gerado por `src/estado.py`, com os números
+  já calculados e em porcentagem (o Jev é fraco em aritmética). Exemplo real:
+  > ABEV3 (Ambev), pregão de 08/10/2026. Retorno no último pregão: +1,1%. Retorno em 5 pregões:
+  > +5,1%. Retorno em 20 pregões: +3,1%. Preço 3,4% acima da média de 20 pregões. Oscilação
+  > diária típica nos últimos 20 pregões: 1,5%. Volume 2,3 vezes o normal.
+
+  Na versão anonimizada (para o teste de memorização), o começo vira só "Ação A.".
 - **Treino walk-forward (ML):** para decidir no dia D, o modelo é treinado de novo usando só
   linhas anteriores a D. A linha de D-1 entra porque o resultado dela (de D-1 para D) já é
   conhecido no fechamento de D.
@@ -112,6 +118,9 @@ python main.py tudo       # todas as etapas em ordem
 
 # Extra (fora da comparação oficial): avalia só o ML em 2025 inteiro
 python main.py ml-historico
+
+# Extra: mostra exemplos do texto que o Jev e o LLM recebem
+python main.py estado
 ```
 
 **Rotina diária:** depois das ~18h (pregão fechado e consolidado), rode
@@ -131,7 +140,7 @@ pregao-das-ias/
 ├── config.py                # tickers, datas, custos, limiar, versões de modelo
 ├── src/
 │   ├── dados.py             # download e indicadores
-│   ├── estado.py            # linha de indicadores -> texto para Jev e LLM   (próxima etapa)
+│   ├── estado.py            # linha de indicadores -> texto para Jev e LLM
 │   ├── decisoes.py          # lê, valida e grava os decisoes_<modelo>.csv (só acréscimo)
 │   ├── avaliacao.py         # carteira, custos, métricas e teste dos agentes aleatórios
 │   └── modelos/
@@ -147,7 +156,8 @@ pregao-das-ias/
 ├── tests/
 │   ├── test_sem_vazamento.py   # provas de que ninguém vê o futuro
 │   ├── test_ml.py              # testes das correções da revisão
-│   └── test_avaliacao.py       # Brier, taxa histórica e comparações pré-registradas
+│   ├── test_avaliacao.py       # Brier, taxa histórica e comparações pré-registradas
+│   └── test_estado.py          # texto do estado: formato, anonimização, sem gabarito
 ├── dados/                   # CSVs baixados (fora do git)
 ├── resultados/
 │   ├── decisoes/            # decisoes_<modelo>.csv (VERSIONADOS no git)
@@ -169,7 +179,7 @@ pregao-das-ias/
 | ML (walk-forward) e "sempre comprar" | pronto e testado |
 | Avaliação (Brier, comparações pareadas, custos, agentes aleatórios) | pronta e testada |
 | Plano de análise (`PREREGISTRO.md`) | registrado em 09/10/2026 |
-| `estado.py` (texto para Jev e LLM) | próxima etapa |
+| `estado.py` (texto para Jev e LLM) | pronto e testado (formato a congelar no adendo do pré-registro) |
 | Jev | próxima etapa (implementar seguindo a documentação oficial, versão fixa `jev-1.13.0`) |
 | LLM | próxima etapa |
 
