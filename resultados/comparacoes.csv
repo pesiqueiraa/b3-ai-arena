@@ -1,4 +1,7 @@
 tipo,modelo_a,modelo_b,dias,pares,confianca,dif_media,ic_baixo,ic_alto,veredito
-secundaria,llm,ml,17,272,0.950000,0.006704,-0.015558,0.028965,parcial (17 de 250 pregões)
-secundaria,llm,taxa_historica,17,272,0.950000,0.008585,-0.011422,0.028592,parcial (17 de 250 pregões)
+principal,jev,ml,17,272,0.975000,-0.000213,-0.003933,0.003506,parcial (17 de 250 pregões)
+principal,jev,llm,17,272,0.975000,-0.015193,-0.048871,0.018486,parcial (17 de 250 pregões)
+secundaria,llm,ml,17,272,0.950000,0.014979,-0.013276,0.043235,parcial (17 de 250 pregões)
+secundaria,jev,taxa_historica,17,272,0.950000,0.001668,-0.002758,0.006094,parcial (17 de 250 pregões)
+secundaria,llm,taxa_historica,17,272,0.950000,0.016861,-0.009437,0.043159,parcial (17 de 250 pregões)
 secundaria,ml,taxa_historica,17,272,0.950000,0.001882,-0.001612,0.005375,parcial (17 de 250 pregões)
