@@ -104,7 +104,7 @@ def test_llm_recebe_exatamente_o_estado_de_estado_py(ambiente):
     llm.rodar()
     janela = ambiente["dados"]
     janela = janela[(janela["periodo"] == "teste_limpo") & (janela["ticker"] != config.REFERENCIA)]
-    esperados = {f"{t}\n\nPergunta: {llm.PERGUNTA}" for t in estado.gerar_estados(janela)["estado"]}
+    esperados = {f"{t}\n\n{llm.ROTULO_PERGUNTA}: {llm.PERGUNTA}" for t in estado.gerar_estados(janela)["estado"]}
     enviados = {p["messages"][1]["content"] for p in ambiente["api"].pedidos}
     assert enviados == esperados
     assert all("gabarito" not in json.dumps(p) for p in ambiente["api"].pedidos)

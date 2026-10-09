@@ -41,21 +41,47 @@ NOME = "llm"
 # e a versão nova precisa ser registrada no PREREGISTRO.md antes de rodar.
 # ---------------------------------------------------------------------------
 
-PROMPT_VERSAO = "llm-prompt-v1"
+# Todas as versões ficam aqui como registro. Só a PROMPT_VERSAO ativa é usada.
+# v1 (português) rodou em 09/10/2026 e foi substituída pela v2 (inglês): ver Desvio 1 no PREREGISTRO.md.
+PROMPTS = {
+    "llm-prompt-v1": {
+        "instrucoes": (
+            "Você vai receber um resumo dos indicadores de uma ação da bolsa brasileira (B3) "
+            "no fechamento de um pregão. Responda à pergunta com a probabilidade de a resposta ser \"sim\". "
+            "Responda APENAS com um JSON no formato {\"prob_subir\": <número de 0 a 1>}, sem nenhum outro texto."
+        ),
+        "rotulo_pergunta": "Pergunta",
+        "correcao": (
+            "Sua resposta não seguiu o formato pedido. Responda APENAS com o JSON "
+            "{\"prob_subir\": <número de 0 a 1>}, sem nenhum outro texto."
+        ),
+        "idioma": "pt",
+    },
+    "llm-prompt-v2": {
+        "instrucoes": (
+            "You will receive a summary of the indicators of a stock listed on the Brazilian stock "
+            "exchange (B3) at the close of a trading session. Answer the question with the probability "
+            "that the answer is \"yes\". Respond ONLY with a JSON object in the format "
+            "{\"prob_subir\": <number from 0 to 1>}, with no other text."
+        ),
+        "rotulo_pergunta": "Question",
+        "correcao": (
+            "Your answer did not follow the requested format. Respond ONLY with the JSON object "
+            "{\"prob_subir\": <number from 0 to 1>}, with no other text."
+        ),
+        "idioma": "en",
+    },
+}
+
+PROMPT_VERSAO = "llm-prompt-v2"
 
 # A pergunta é a mesma do Jev e mora em src/estado.py (regra 4).
 PERGUNTA = estado.PERGUNTA
 
-INSTRUCOES = (
-    "Você vai receber um resumo dos indicadores de uma ação da bolsa brasileira (B3) "
-    "no fechamento de um pregão. Responda à pergunta com a probabilidade de a resposta ser \"sim\". "
-    "Responda APENAS com um JSON no formato {\"prob_subir\": <número de 0 a 1>}, sem nenhum outro texto."
-)
-
-CORRECAO = (
-    "Sua resposta não seguiu o formato pedido. Responda APENAS com o JSON "
-    "{\"prob_subir\": <número de 0 a 1>}, sem nenhum outro texto."
-)
+INSTRUCOES = PROMPTS[PROMPT_VERSAO]["instrucoes"]
+ROTULO_PERGUNTA = PROMPTS[PROMPT_VERSAO]["rotulo_pergunta"]
+CORRECAO = PROMPTS[PROMPT_VERSAO]["correcao"]
+assert PROMPTS[PROMPT_VERSAO]["idioma"] == config.ESTADO_IDIOMA, "Prompt e estado em idiomas diferentes!"
 
 
 # ---------------------------------------------------------------------------
@@ -93,7 +119,7 @@ def verificar_preregistro(modelo: str) -> None:
 def montar_mensagens(texto_estado: str) -> list[dict]:
     return [
         {"role": "system", "content": INSTRUCOES},
-        {"role": "user", "content": f"{texto_estado}\n\nPergunta: {PERGUNTA}"},
+        {"role": "user", "content": f"{texto_estado}\n\n{ROTULO_PERGUNTA}: {PERGUNTA}"},
     ]
 
 
@@ -311,7 +337,7 @@ def testar() -> None:
     antigo = df[(df["ticker"] != config.REFERENCIA) & (df["periodo"] == "historico")].iloc[[0]]
     texto = estado.gerar_estados(antigo)["estado"].iloc[0]
 
-    print(f"Modelo: {modelo}\nEstado enviado: {texto}\nPergunta: {PERGUNTA}\n")
+    print(f"Modelo: {modelo} | prompt: {PROMPT_VERSAO}\nEstado enviado: {texto}\n{ROTULO_PERGUNTA}: {PERGUNTA}\n")
     r = decidir(texto, modelo, chave)
     print(f"Resposta(s) do modelo: {r['respostas']}")
     if r["prob_subir"] is None:

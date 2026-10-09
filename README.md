@@ -37,13 +37,17 @@ A tarefa é sempre a mesma: no fechamento de cada pregão, para cada ação, res
   Esses dias não podiam estar no treino de nenhum dos modelos de linguagem.
 - **Mesmas informações para todos:** retornos de 1, 5 e 20 pregões, distância da média de
   20 pregões, volatilidade e volume relativo. Tudo calculado **só com o passado**.
-  O Jev e o LLM recebem exatamente o mesmo texto, gerado por `src/estado.py`, com os números
-  já calculados e em porcentagem (o Jev é fraco em aritmética). Exemplo real:
-  > ABEV3 (Ambev), pregão de 08/10/2026. Retorno no último pregão: +1,1%. Retorno em 5 pregões:
-  > +5,1%. Retorno em 20 pregões: +3,1%. Preço 3,4% acima da média de 20 pregões. Oscilação
-  > diária típica nos últimos 20 pregões: 1,5%. Volume 2,3 vezes o normal.
+  O Jev e o LLM recebem exatamente o mesmo texto e a mesma pergunta, gerados por `src/estado.py`,
+  com os números já calculados e em porcentagem (o Jev é fraco em aritmética). O texto vai em
+  **inglês**, o idioma principal do Jev segundo a documentação dele (ver Desvio 1 no
+  [PREREGISTRO.md](PREREGISTRO.md)). Exemplo real:
+  > ABEV3 (Ambev), trading session of October 8, 2026. Return in the last session: +1.1%. Return
+  > over the last 5 sessions: +5.1%. Return over the last 20 sessions: +3.1%. Price 3.4% above its
+  > 20-session average. Typical daily move over the last 20 sessions: 1.5%. Volume 2.3 times normal.
+  >
+  > *Will the stock close the next trading session above today's close?*
 
-  Na versão anonimizada (para o teste de memorização), o começo vira só "Ação A.".
+  Na versão anonimizada (para o teste de memorização), o começo vira só "Stock A.".
 - **Treino walk-forward (ML):** para decidir no dia D, o modelo é treinado de novo usando só
   linhas anteriores a D. A linha de D-1 entra porque o resultado dela (de D-1 para D) já é
   conhecido no fechamento de D.
@@ -127,7 +131,7 @@ python main.py estado
 1. Preencha `LLM_API_KEY` e `LLM_MODELO` no `.env`.
 2. `python main.py llm --teste` faz **uma** pergunta num pregão antigo, para conferir a chave, o
    modelo e se ele responde no formato pedido. Não grava nenhuma decisão.
-3. Registre o modelo e a versão do prompt (`llm-prompt-v1`) num adendo ao `PREREGISTRO.md` e
+3. Registre o modelo e a versão do prompt (hoje `llm-prompt-v2`) num adendo ao `PREREGISTRO.md` e
    faça o commit. Sem isso, `python main.py llm` se recusa a rodar.
 4. `python main.py llm` decide a janela limpa inteira. As respostas ficam em `resultados/cache/llm/`,
    então rodar de novo não paga de novo. Respostas inválidas (mesmo após uma nova tentativa)
@@ -192,9 +196,9 @@ pregao-das-ias/
 | ML (walk-forward) e "sempre comprar" | pronto e testado |
 | Avaliação (Brier, comparações pareadas, custos, agentes aleatórios) | pronta e testada |
 | Plano de análise (`PREREGISTRO.md`) | registrado em 09/10/2026 |
-| `estado.py` (texto para Jev e LLM) | pronto e testado (formato a congelar no adendo do pré-registro) |
-| Jev | pronto e testado (falta o Adendo 2 do pré-registro) |
-| LLM | pronto e testado com API falsa (falta: chave, escolha do modelo e adendo do pré-registro) |
+| `estado.py` (texto para Jev e LLM) | pronto, testado e congelado (inglês) |
+| Jev | pronto, testado e registrado (Adendo 2) |
+| LLM | pronto, testado e registrado (Adendo 1 + Desvio 1: prompt v2 em inglês) |
 
 ## Correções feitas na revisão dos scripts originais
 

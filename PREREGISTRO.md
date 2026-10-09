@@ -154,6 +154,84 @@ As decisões do LLM de 15/09/2026 até a data da primeira execução serão calc
 retroativamente. O modelo é de 2025 e não pode ter visto esses pregões; a análise de
 sensibilidade do item 6 separa essas decisões das tomadas antes do fechamento do pregão seguinte.
 
+## Adendo 2: Jev (registrado em 09/10/2026, antes da primeira decisão do Jev)
+
+### Modelo e chamada
+- **Modelo:** `jev-1.13.0` (versão fixa). Os apelidos `jev-latest` e `jev-preview` são
+  recusados pelo código, e uma resposta com outra versão interrompe a etapa. Segundo
+  `GET /v1/models`, o `jev-latest` (hoje apontando para `jev-1.13.0`) foi lançado em
+  10/09/2026, antes do início da janela limpa (15/09/2026).
+- **Chamada:** `POST https://api.typesafe.ai/v1/systemone`, conforme https://docs.typesafe.ai/api.md (consultada
+  em 09/10/2026). Uma pergunta do tipo Noul por ação e dia, sem `criteria`:
+```json
+{
+  "state": "<estado>",
+  "model": "jev-1.13.0",
+  "questions": {
+    "sobe": {
+      "type": "noul",
+      "instructions": "Will the stock close the next trading session above today's close?"
+    }
+  }
+}
+```
+- **prob_subir** = `answers.sobe.noul` (probabilidade de "sim").
+- **Pergunta:** versão `jev-pergunta-v1`, texto idêntico ao do LLM: "Will the stock close the next trading session above today's close?"
+- **Estado:** o mesmo texto do LLM, gerado por `src/estado.py` em inglês (ver Desvio 1).
+- **Resposta fora do formato:** a mesma pergunta é repetida uma vez; se falhar de novo, o par
+  vai para `resultados/falhas_jev.csv` e fica fora das comparações (item 6).
+- **Custo:** a API não devolve custo; ele é estimado pelo preço publicado em
+  https://docs.typesafe.ai/models.md (US$ 0,042 por milhão de tokens de entrada).
+
+### Comportamento observado antes do registro (dados históricos, fora da janela)
+Em 120 estados de 2024 a 2025, o Jev respondeu numa faixa estreita: 0,43 a 0,50 em inglês
+(média 0,476) e 0,42 a 0,48 em português (média 0,456). Com o limiar de compra de 0,5
+(item 5, `config.LIMIAR_COMPRA`), é provável que o Jev quase nunca compre. **O limiar não será
+alterado**: a métrica principal é o Brier, que não depende do limiar. As métricas de carteira
+do Jev serão relatadas como estão, com essa ressalva.
+
+### Se algo mudar
+Se `jev-1.13.0` ficar indisponível, o Jev fica pausado (sem troca silenciosa para outra
+versão). A solução será registrada na seção "Desvios" antes de retomar.
+
+### Decisões retroativas
+As decisões do Jev de 15/09/2026 até a data da primeira execução serão calculadas
+retroativamente, como as do ML e do LLM (item 6).
+
 ## Desvios
 
-Nenhum até o momento.
+### Desvio 1 (09/10/2026): estado e pergunta em inglês para Jev e LLM
+
+- **O que mudou:** o estado e a pergunta passam do português para o inglês
+  (`config.ESTADO_IDIOMA = "en"`), para o Jev e para o LLM. O texto em inglês é uma tradução
+  direta: mesmas seis informações, mesmos números, com ponto decimal e datas por extenso
+  ("October 8, 2026"), sem a ambiguidade dia/mês. O prompt do LLM passa para a versão
+  `llm-prompt-v2`. O modelo, o provedor e os parâmetros do Adendo 1 não mudam.
+- **Por quê:** a documentação oficial do Jev (https://docs.typesafe.ai/concepts/state.md) diz que
+  o idioma principal de treino é o inglês e que outros idiomas "have lower accuracy". Para
+  comparar os modelos em condições justas, cada um deve receber a pergunta no idioma em que
+  funciona melhor, e o inglês serve aos dois. A decisão se baseia na documentação do
+  fornecedor, não em resultados: nenhum modelo foi avaliado em inglês na janela limpa antes
+  deste registro. A única comparação feita foi de concordância entre idiomas, em 120 estados
+  históricos (correlação de 0,72 entre as respostas em português e em inglês, mesma decisão em
+  100% dos casos, inglês em média 0,02 mais alto).
+- **O que acontece com o que já rodou:** as 288 decisões do LLM com o prompt v1 (português),
+  tomadas em 09/10/2026, ficam guardadas em `resultados/extra/llm_prompt_v1_pt/` e no histórico
+  do git, e **não entram na análise**. O LLM é rodado de novo na janela limpa com a v2.
+  O Jev ainda não tinha rodado.
+- **Texto do prompt `llm-prompt-v2`** (substitui a v1 do Adendo 1):
+
+Mensagem de sistema:
+```
+You will receive a summary of the indicators of a stock listed on the Brazilian stock exchange (B3) at the close of a trading session. Answer the question with the probability that the answer is "yes". Respond ONLY with a JSON object in the format {"prob_subir": <number from 0 to 1>}, with no other text.
+```
+Mensagem do usuário:
+```
+<estado>
+
+Question: Will the stock close the next trading session above today's close?
+```
+Mensagem de correção:
+```
+Your answer did not follow the requested format. Respond ONLY with the JSON object {"prob_subir": <number from 0 to 1>}, with no other text.
+```

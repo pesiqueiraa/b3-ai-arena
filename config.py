@@ -42,6 +42,10 @@ NOMES_EMPRESAS = {
     "BOVA11": "ETF do Ibovespa",
 }
 
+# Idioma do estado e da pergunta enviados ao Jev e ao LLM ("en" ou "pt").
+# Inglês porque é o idioma principal do Jev (ver Desvio 1 no PREREGISTRO.md).
+ESTADO_IDIOMA = "en"
+
 # BOVA11 é o ETF do Ibovespa: a régua de "comprar e segurar".
 # Ele é baixado, mas NÃO é uma ação que os modelos podem escolher.
 REFERENCIA = "BOVA11"
