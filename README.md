@@ -48,9 +48,11 @@ python main.py prova-final       # UMA vez, quando o laboratório estiver revisa
 
 ## Como a linha evita se enganar
 
-- **Universo sem viés de sobrevivência:** a cada mês, as 100 ações mais líquidas pelo volume dos
-  3 meses **anteriores**, usando as cotações oficiais da B3 (que incluem empresas que deixaram de
-  existir).
+- **Universo montado sem viés de sobrevivência:** a cada mês, as 100 ações mais líquidas pelo volume
+  dos 3 meses **anteriores**, usando as cotações oficiais da B3 (que incluem empresas que deixaram de
+  existir). Atenção: isso vale para o **universo**, não para os **preços**. Os preços ajustados vêm
+  do Yahoo, que não tem parte das ações que mudaram de ticker ou deixaram de existir (cobertura média
+  de 70,8%, pior em 2016–2018). Veja a cobertura por ano no relatório do laboratório.
 - **Nada do futuro:** as features usam só dados até o fechamento do dia. O treino tem **embargo de
   10 pregões**, porque o resultado de um dia só é conhecido 10 pregões depois.
 - **Custos:** 0,10% por lado (custos + margem para slippage).
@@ -70,5 +72,9 @@ python main.py prova-final       # UMA vez, quando o laboratório estiver revisa
 
 - Execução simplificada: compra e venda no preço de fechamento.
 - Ações sem preço ajustado no Yahoo ficam de fora (ver cobertura em `resultados/universo/cobertura.csv`).
+  Por isso os **resultados ainda têm algum viés de sobrevivência**: o universo é oficial, mas os preços
+  só existem para as ações que o Yahoo conhece (cobertura média de 70,8%, pior em 2016–2018).
+- Empresas em recuperação judicial (CODBDI 08 no COTAHIST) ficam de fora por decisão deliberada:
+  a linha usa só o lote padrão (CODBDI 02).
 - Tickers reaproveitados por outra empresa são só relatados (`tickers_com_troca_de_nome.csv`).
 - A reserva tem poucos meses: um resultado positivo é um sinal, não uma prova definitiva.

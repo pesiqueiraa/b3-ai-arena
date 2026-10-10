@@ -69,3 +69,19 @@ def test_excesso_vazio_nunca_e_escolhido():
     linhas = [{"tipo": "logistica", "k": 3, "p_min": 0.6, "excesso_medio_anual": float("nan")},
               {"tipo": "logistica", "k": 5, "p_min": 0.5, "excesso_medio_anual": -0.02}]
     assert executar.escolher({"logistica": 0.25}, linhas)["k"] == 5
+
+
+def test_relatorio_traz_cobertura_por_ano(monkeypatch, tmp_path):
+    arquivo = tmp_path / "cobertura.csv"
+    pd.DataFrame({"mes": ["2016-01", "2016-02", "2017-01"], "no_universo": [100, 100, 100],
+                  "com_preco": [50, 60, 90], "cobertura": [0.5, 0.6, 0.9]}).to_csv(arquivo, index=False)
+    monkeypatch.setattr(config, "ARQUIVO_COBERTURA", arquivo)
+    texto = executar._relatorio([], {"tipo": "logistica", "k": 5, "p_min": 0.55}, {})
+    assert "Cobertura por ano" in texto
+    assert "| 2016 | 55.0% |" in texto and "| 2017 | 90.0% |" in texto
+
+
+def test_relatorio_sem_arquivo_de_cobertura_nao_quebra(monkeypatch, tmp_path):
+    monkeypatch.setattr(config, "ARQUIVO_COBERTURA", tmp_path / "nao_existe.csv")
+    texto = executar._relatorio([], {"tipo": "logistica", "k": 5, "p_min": 0.55}, {})
+    assert "Cobertura por ano" not in texto

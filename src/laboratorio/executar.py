@@ -125,11 +125,17 @@ def _relatorio(linhas: list[dict], escolha: dict, resumo_probs: dict) -> str:
             f"{_pct(l['pior_queda'])} | {_pct(l['acerto_compras'])} | {_pct(l['acerto_vendas'])} | "
             f"{_pct(l['bateu_aleatorios'])} | {l['compras_por_dia']:.1f} |")
     cobertura = "-"
+    por_ano = []
     if config.ARQUIVO_COBERTURA.exists():
-        cobertura = f"{pd.read_csv(config.ARQUIVO_COBERTURA)['cobertura'].mean():.1%}"
+        dados = pd.read_csv(config.ARQUIVO_COBERTURA)
+        cobertura = f"{dados['cobertura'].mean():.1%}"
+        medias = dados.groupby(dados["mes"].astype(str).str[:4])["cobertura"].mean()
+        por_ano = ["", "## Cobertura por ano (ações do universo com preço ajustado no Yahoo)", "",
+                   "| ano | cobertura média |", "|---|---|"]
+        por_ano += [f"| {ano} | {valor:.1%} |" for ano, valor in medias.items()]
     texto += ["", f"**Escolha:** modelo `{escolha['tipo']}`, k = {escolha['k']}, p_min = {escolha['p_min']:.2f} "
               "(menor Brier; dentro dele, maior excesso médio anual).", "",
-              f"**Cobertura média do universo com preço ajustado:** {cobertura}.", "",
+              f"**Cobertura média do universo com preço ajustado:** {cobertura}.", *por_ano, "",
               f"Tentativas registradas até agora: ver `{config.ARQUIVO_TENTATIVAS.name}`.", "",
               "> Os sinais continuam **só para leitura** até a prova final (`python main.py prova-final`)."]
     return "\n".join(texto) + "\n"
