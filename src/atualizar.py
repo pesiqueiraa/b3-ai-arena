@@ -28,15 +28,28 @@ def _baixar_b3() -> pd.DataFrame:
     partes = []
     for ano in range(int(config.DATA_DOWNLOAD_INICIO[:4]), ano_atual() + 1):
         print(f"B3 {ano}:", end=" ", flush=True)
-        try:
-            caminho = b3.baixar_ano(ano, forcar=(ano == ano_atual()))
-        except Exception as erro:
-            caminho = b3.caminho_do_ano(ano)
-            if not caminho.exists():
-                print(f"-> não consegui baixar ({erro}) e não há cópia local. Ano pulado.")
-                continue
-            print(f"-> não consegui baixar ({erro}); usando a cópia já baixada.", end=" ")
-        tabela = b3.ler_ano(caminho)
+        tabela = None
+        for tentativa in (1, 2):
+            try:
+                caminho = b3.baixar_ano(ano, forcar=(ano == ano_atual() and tentativa == 1))
+            except Exception as erro:
+                caminho = b3.caminho_do_ano(ano)
+                if not caminho.exists():
+                    print(f"-> não consegui baixar ({erro}) e não há cópia local. Ano pulado.")
+                    break
+                print(f"-> não consegui baixar ({erro}); usando a cópia já baixada.", end=" ")
+            try:
+                tabela = b3.ler_ano(caminho)
+                break
+            except Exception as erro:
+                if tentativa == 1:
+                    print(f"-> a cópia local está ilegível ({erro}); apaguei e vou baixar de novo.", end=" ")
+                    caminho.unlink(missing_ok=True)
+                else:
+                    print(f"-> ainda ilegível depois de baixar de novo ({erro}). Ano pulado.")
+                    caminho.unlink(missing_ok=True)
+        if tabela is None:
+            continue
         print(f"-> {len(tabela)} linhas de ações")
         partes.append(tabela)
     if not partes:

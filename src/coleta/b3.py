@@ -1,8 +1,10 @@
 """
 b3.py
 Séries históricas OFICIAIS da B3 (arquivos COTAHIST). Elas têm todas as ações negociadas,
-inclusive as que deixaram de existir. Uso: montar o universo de cada mês sem viés de
-sobrevivência. Os preços daqui NÃO são ajustados por dividendos; os retornos vêm do Yahoo.
+inclusive as que deixaram de existir. Uso: montar o UNIVERSO de cada mês sem viés de
+sobrevivência (só lote padrão, CODBDI 02: empresas em recuperação judicial, CODBDI 08, ficam de
+fora de propósito). Atenção: os preços ajustados vêm do Yahoo, que não tem parte das ações que
+mudaram de ticker ou deixaram de existir; então os PREÇOS não estão livres desse viés. Os preços daqui NÃO são ajustados por dividendos; os retornos vêm do Yahoo.
 
 Layout oficial (posições fixas, 245 caracteres por linha). Campos usados (posições a partir de 1):
     TIPREG 1-2 ("01" = cotação), DATA 3-10, CODBDI 11-12 ("02" = lote padrão),
@@ -12,6 +14,7 @@ Layout oficial (posições fixas, 245 caracteres por linha). Campos usados (posi
 """
 
 import io
+import os
 import zipfile
 from collections.abc import Iterable
 from pathlib import Path
@@ -69,7 +72,20 @@ def baixar_ano(ano: int, forcar: bool = False) -> Path:
     config.PASTA_B3.mkdir(parents=True, exist_ok=True)
     resposta = requests.get(config.URL_COTAHIST.format(ano=ano), timeout=600)
     resposta.raise_for_status()
-    destino.write_bytes(resposta.content)
+    # Grava num arquivo temporário e só troca pelo definitivo depois de conferir que é um ZIP bom.
+    # Assim, uma página de erro (HTML) ou um download cortado nunca vira o arquivo do ano.
+    temporario = destino.with_name(destino.name + ".tmp")
+    temporario.write_bytes(resposta.content)
+    try:
+        if not zipfile.is_zipfile(temporario):
+            raise ValueError(f"o arquivo baixado para {ano} não é um ZIP (a B3 pode ter devolvido uma página de erro)")
+        with zipfile.ZipFile(temporario) as arquivo:
+            if arquivo.testzip() is not None:
+                raise ValueError(f"o ZIP baixado para {ano} está corrompido")
+    except Exception:
+        temporario.unlink(missing_ok=True)
+        raise
+    os.replace(temporario, destino)
     return destino
 
 

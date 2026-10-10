@@ -85,3 +85,88 @@ def test_detecta_ticker_com_troca_de_nome():
     assert b3.tickers_com_troca_de_nome(tabela).to_dict("records") == [
         {"ticker": "ABCD3", "nomes": "NOVA SA | VELHA SA"}
     ]
+
+
+class _RespostaFalsa:
+    def __init__(self, conteudo: bytes):
+        self.content = conteudo
+
+    def raise_for_status(self):
+        pass
+
+
+def test_baixar_ano_recusa_html_e_nao_cria_arquivo(tmp_path, monkeypatch):
+    import requests
+    import config
+    monkeypatch.setattr(config, "PASTA_B3", tmp_path)
+    monkeypatch.setattr(requests, "get", lambda *a, **k: _RespostaFalsa(b"<html>erro</html>"))
+    with pytest.raises(ValueError, match="não é um ZIP"):
+        b3.baixar_ano(2024)
+    assert list(tmp_path.iterdir()) == []            # nem o destino, nem o .tmp
+
+
+def test_baixar_ano_grava_zip_valido(tmp_path, monkeypatch):
+    import io
+    import requests
+    import config
+    monkeypatch.setattr(config, "PASTA_B3", tmp_path)
+    memoria = io.BytesIO()
+    with zipfile.ZipFile(memoria, "w") as z:
+        z.writestr("COTAHIST_A2024.TXT", linha())
+    monkeypatch.setattr(requests, "get", lambda *a, **k: _RespostaFalsa(memoria.getvalue()))
+    destino = b3.baixar_ano(2024)
+    assert destino.exists() and zipfile.is_zipfile(destino)
+    assert [p.name for p in tmp_path.iterdir()] == [destino.name]
+
+
+def test_atualizar_apaga_copia_ilegivel_e_baixa_de_novo(tmp_path, monkeypatch):
+    from src import atualizar
+    import config
+    monkeypatch.setattr(config, "DATA_DOWNLOAD_INICIO", "2024-01-01")
+    monkeypatch.setattr(atualizar, "ano_atual", lambda: 2024)
+    zip_ruim = tmp_path / "2024.zip"
+    zip_ruim.write_bytes(b"lixo")
+    monkeypatch.setattr(atualizar.b3, "caminho_do_ano", lambda ano: zip_ruim)
+    chamadas = []
+
+    def baixar_falso(ano, forcar=False):
+        chamadas.append(forcar)
+        with zipfile.ZipFile(zip_ruim, "w") as z:
+            z.writestr("COTAHIST_A2024.TXT", linha())
+        return zip_ruim
+
+    monkeypatch.setattr(atualizar.b3, "baixar_ano", baixar_falso)
+    # primeira leitura acontece na cópia ruim: baixar_falso troca por uma boa só depois do unlink
+    tabela_boa = b3.ler_linhas([linha()])
+    leituras = []
+
+    def ler_falso(caminho):
+        leituras.append(1)
+        if len(leituras) == 1:
+            raise zipfile.BadZipFile("lixo")
+        return tabela_boa
+
+    monkeypatch.setattr(atualizar.b3, "ler_ano", ler_falso)
+    resultado = atualizar._baixar_b3()
+    assert len(resultado) == 1 and len(leituras) == 2
+
+
+def test_atualizar_pula_ano_se_continua_ilegivel(tmp_path, monkeypatch):
+    from src import atualizar
+    import config
+    monkeypatch.setattr(config, "DATA_DOWNLOAD_INICIO", "2023-01-01")
+    monkeypatch.setattr(atualizar, "ano_atual", lambda: 2024)
+    monkeypatch.setattr(atualizar.b3, "caminho_do_ano", lambda ano: tmp_path / f"{ano}.zip")
+
+    def baixar_falso(ano, forcar=False):
+        (tmp_path / f"{ano}.zip").write_bytes(b"x")
+        return tmp_path / f"{ano}.zip"
+
+    def ler_falso(caminho):
+        if "2023" in caminho.name:
+            raise zipfile.BadZipFile("ruim")
+        return b3.ler_linhas([linha()])
+
+    monkeypatch.setattr(atualizar.b3, "baixar_ano", baixar_falso)
+    monkeypatch.setattr(atualizar.b3, "ler_ano", ler_falso)
+    assert len(atualizar._baixar_b3()) == 1          # 2023 pulado, 2024 lido
