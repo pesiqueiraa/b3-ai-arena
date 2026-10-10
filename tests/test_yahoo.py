@@ -48,3 +48,12 @@ def test_baixar_varios_sem_nada_devolve_tabela_vazia():
                                            baixar=lambda t, i: pd.DataFrame())
     assert precos.empty and falharam == ["ERRO3"]
     assert list(precos.columns) == ["data", "ticker", "fechamento_ajustado", "volume"]
+
+
+def test_remove_pregao_com_abertura_maxima_minima_nan():
+    precos = pd.concat([
+        _tabela("AAAA3", ["2026-10-07"]),
+        _tabela("AAAA3", ["2026-10-08"], abertura=float("nan")),              # hoje, tudo em branco
+    ])
+    limpo = yahoo.remover_pregoes_incompletos(precos)
+    assert list(limpo["data"].dt.strftime("%Y-%m-%d")) == ["2026-10-07"]

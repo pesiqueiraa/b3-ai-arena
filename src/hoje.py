@@ -27,8 +27,30 @@ def escolha_atual() -> dict:
     return {"tipo": "logistica", "k": config.K_PADRAO, "p_min": config.P_MIN_PADRAO}
 
 
+MINIMO_DO_DIA = 0.90   # o dia precisa ter pelo menos 90% das ações do pregão anterior
+
+
+def escolher_dia(tabela: pd.DataFrame) -> tuple[pd.Timestamp, list[str]]:
+    """
+    Escolhe o dia dos sinais. Normalmente é o último pregão da tabela. Se esse dia tem menos de 90%
+    das ações do pregão anterior (dados do dia incompletos), usa o anterior. Nunca se gera sinal com
+    dados do dia faltando. Devolve (dia, tickers_que_faltavam_no_dia_descartado).
+    """
+    por_dia = tabela.groupby("data")["ticker"].apply(set).sort_index()
+    posicao = len(por_dia) - 1
+    faltando: list[str] = []
+    while posicao > 0 and len(por_dia.iloc[posicao]) < MINIMO_DO_DIA * len(por_dia.iloc[posicao - 1]):
+        faltando = sorted(por_dia.iloc[posicao - 1] - por_dia.iloc[posicao])
+        posicao -= 1
+    return por_dia.index[posicao], faltando
+
+
 def calcular(base: Base, escolha: dict, treinar=combinador.treinar) -> tuple[pd.DataFrame, pd.Timestamp]:
-    dia = base.tabela["data"].max()
+    dia, faltando = escolher_dia(base.tabela)
+    if dia != base.tabela["data"].max():
+        print(f"Aviso: {base.tabela['data'].max():%d/%m/%Y} está com dados incompletos; "
+              f"usando o pregão anterior ({dia:%d/%m/%Y}). Ações que faltavam (até 20): "
+              f"{', '.join(faltando[:20])}")
     limite = limite_de_treino(base.calendario, dia)
     treino = base.tabela[(base.tabela["data"] <= limite) & base.tabela["rotulo"].notna()]
     modelo = treinar(treino[COLUNAS_MODELO], treino["rotulo"].astype(int), escolha["tipo"])

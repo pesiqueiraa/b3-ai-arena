@@ -39,10 +39,12 @@ def baixar_ticker(ticker: str, inicio: str) -> pd.DataFrame:
 def remover_pregoes_incompletos(precos: pd.DataFrame) -> pd.DataFrame:
     """
     Quando o download acontece antes de o Yahoo consolidar o dia, a linha de hoje vem com abertura,
-    máxima e mínima iguais a zero. Essas linhas são removidas. Dias antigos com volume zero mas com
+    máxima e mínima iguais a zero (ou em branco/NaN). Essas linhas são removidas. Dias antigos com volume zero mas com
     preços preenchidos (dia sem negócio) ficam.
     """
-    incompleta = (precos["abertura"] == 0) & (precos["maxima"] == 0) & (precos["minima"] == 0)
+    # "vazio" = zero ou NaN (o Yahoo às vezes devolve a linha do dia com os três campos em branco)
+    vazio = lambda coluna: (precos[coluna] == 0) | precos[coluna].isna()
+    incompleta = vazio("abertura") & vazio("maxima") & vazio("minima")
     if incompleta.any():
         datas = sorted(precos.loc[incompleta, "data"].dt.strftime("%d/%m/%Y").unique())
         print(f"Aviso: {int(incompleta.sum())} linha(s) de pregão incompleto removidas "
