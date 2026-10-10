@@ -44,6 +44,38 @@ def _baixar_b3() -> pd.DataFrame:
     return pd.concat(partes, ignore_index=True)
 
 
+LIMITE_DE_FALHAS = 0.10   # acima disso, o download do Yahoo é considerado ruim demais
+
+
+def _juntar_com_precos_anteriores(precos: pd.DataFrame, tickers: list[str]) -> pd.DataFrame:
+    """
+    Protege o arquivo de preços de um download parcial do Yahoo. Se já existe um arquivo anterior:
+    tickers que tinham dados antes e falharam agora mantêm as linhas antigas; se mais de 10% deles
+    falharam, nada é sobrescrito (SystemExit).
+    """
+    if "ticker" not in precos.columns or precos.empty:
+        raise SystemExit("O Yahoo não devolveu nenhum preço (sem internet ou bloqueio temporário?). "
+                         "Nada foi alterado. Tente de novo mais tarde.")
+    if config.REFERENCIA not in set(precos["ticker"]):
+        raise SystemExit(f"Não consegui os preços do {config.REFERENCIA}, que é a referência. Tente de novo.")
+    if not config.ARQUIVO_PRECOS.exists():
+        return precos
+
+    anteriores = pd.read_csv(config.ARQUIVO_PRECOS, parse_dates=["data"])
+    tinham = set(anteriores["ticker"]) & set(tickers)
+    perdidos = sorted(tinham - set(precos["ticker"]))
+    if not perdidos:
+        return precos
+    if len(perdidos) / len(tinham) > LIMITE_DE_FALHAS:
+        raise SystemExit(f"O Yahoo falhou em {len(perdidos)} de {len(tinham)} tickers que já tinham preço "
+                         f"(mais de {LIMITE_DE_FALHAS:.0%}). Não sobrescrevi o arquivo de preços. "
+                         "Tente de novo mais tarde.")
+    print(f"Aviso: o Yahoo falhou em {len(perdidos)} ticker(s) que já tinham preço; mantive as linhas "
+          f"antigas deles: {', '.join(perdidos[:20])}")
+    juntos = pd.concat([precos, anteriores[anteriores["ticker"].isin(perdidos)]], ignore_index=True)
+    return juntos.sort_values(["ticker", "data"]).reset_index(drop=True)
+
+
 def rodar() -> None:
     for pasta in (config.PASTA_PROCESSADOS, config.PASTA_UNIVERSO, config.ARQUIVO_B3.parent,
                   config.ARQUIVO_UNIVERSO.parent, config.ARQUIVO_CALENDARIO.parent):
@@ -61,8 +93,7 @@ def rodar() -> None:
     tickers = sorted(set(universo["ticker"])) + [config.REFERENCIA]
     print(f"\nBaixando preços ajustados de {len(tickers)} tickers no Yahoo...")
     precos, falharam = yahoo.baixar_varios(tickers, config.DATA_DOWNLOAD_INICIO)
-    if config.REFERENCIA not in set(precos["ticker"]):
-        raise SystemExit(f"Não consegui os preços do {config.REFERENCIA}, que é a referência. Tente de novo.")
+    precos = _juntar_com_precos_anteriores(precos, tickers)
     precos.to_csv(config.ARQUIVO_PRECOS, index=False, date_format="%Y-%m-%d")
 
     calendario = montar_calendario(tabela_b3["data"], precos.loc[precos["ticker"] == config.REFERENCIA, "data"])
