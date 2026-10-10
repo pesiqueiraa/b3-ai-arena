@@ -1,1 +1,1 @@
-"""Código do experimento O Pregão das IAs."""
+"""Linha de produção de sinais (B3, swing trade)."""

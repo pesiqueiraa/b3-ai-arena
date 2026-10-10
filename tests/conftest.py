@@ -1,55 +1,53 @@
 """
-Peças compartilhadas pelos testes: preços inventados (passeio aleatório), sem internet.
-Num passeio aleatório o futuro é imprevisível por construção, então NENHUM modelo honesto
-deveria acertar a direção muito mais do que 50% das vezes.
+Dados inventados para os testes, sem internet.
+Os preços são um passeio aleatório: o futuro é imprevisível por construção, então nenhum modelo
+honesto deveria achar padrão neles.
 """
 
 import numpy as np
 import pandas as pd
 import pytest
 
-from src import dados
-
-TICKERS_FALSOS = ["AAAA3", "BBBB4", "CCCC3", "DDDD4", "EEEE3", "FFFF3", "BOVA11"]
-DATA_CORTE_FALSA = "2025-06-02"
+import config
 
 
-def gerar_precos(semente: int = 7, n_dias: int = 520) -> pd.DataFrame:
+def gerar_precos(n_acoes: int = 20, inicio: str = "2015-01-01", fim: str = "2017-12-31",
+                 semente: int = 7) -> tuple[pd.DataFrame, pd.DatetimeIndex]:
+    """Devolve (precos, calendario). Colunas: data, ticker, fechamento_ajustado, volume (com BOVA11)."""
     rng = np.random.default_rng(semente)
-    datas = pd.bdate_range("2024-01-01", periods=n_dias)
+    calendario = pd.DatetimeIndex(pd.bdate_range(inicio, fim))
+    tickers = [f"AC{i:02d}3" for i in range(n_acoes)] + [config.REFERENCIA]
     partes = []
-    for ticker in TICKERS_FALSOS:
-        retornos = rng.normal(0, 0.015, n_dias)
-        preco = 20 * np.exp(np.cumsum(retornos))
+    for ticker in tickers:
+        preco = 20 * np.exp(np.cumsum(rng.normal(0, 0.015, len(calendario))))
         partes.append(pd.DataFrame({
-            "data": datas,
+            "data": calendario,
             "ticker": ticker,
-            "abertura": preco,
-            "maxima": preco * 1.01,
-            "minima": preco * 0.99,
-            "fechamento": preco,
             "fechamento_ajustado": preco,
-            "volume": rng.lognormal(15, 0.4, n_dias).round(),
+            "volume": rng.lognormal(15, 0.4, len(calendario)).round(),
         }))
-    return pd.concat(partes, ignore_index=True).sort_values(["data", "ticker"]).reset_index(drop=True)
+    return pd.concat(partes, ignore_index=True), calendario
+
+
+def universo_completo(precos: pd.DataFrame, calendario: pd.DatetimeIndex) -> pd.DataFrame:
+    """Universo em que todas as ações (menos o BOVA11) estão na lista em todos os meses."""
+    primeiros = pd.Series(calendario).groupby(calendario.to_period("M")).first()
+    acoes = sorted(t for t in precos["ticker"].unique() if t != config.REFERENCIA)
+    linhas = [
+        {"mes": str(mes), "data_inicio": dia, "ticker": t, "posicao": i + 1, "volume_medio": 1.0}
+        for mes, dia in primeiros.items() for i, t in enumerate(acoes)
+    ]
+    return pd.DataFrame(linhas)
 
 
 @pytest.fixture(scope="session")
-def precos() -> pd.DataFrame:
+def sinteticos():
     return gerar_precos()
 
 
 @pytest.fixture(scope="session")
-def indicadores(precos) -> pd.DataFrame:
-    return dados.calcular_indicadores(precos, data_corte=DATA_CORTE_FALSA)
+def base_sintetica(sinteticos):
+    from src.base import montar_base  # criado na Tarefa 7
 
-
-@pytest.fixture(scope="session")
-def acoes(indicadores) -> pd.DataFrame:
-    """Indicadores sem o BOVA11 (que é régua, não escolha)."""
-    return indicadores[indicadores["ticker"] != "BOVA11"].reset_index(drop=True)
-
-
-@pytest.fixture(scope="session")
-def dias_teste(acoes) -> list:
-    return sorted(acoes.loc[acoes["periodo"] == "teste_limpo", "data"].unique())
+    precos, calendario = sinteticos
+    return montar_base(precos, universo_completo(precos, calendario), calendario)

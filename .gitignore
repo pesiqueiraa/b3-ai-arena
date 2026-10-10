@@ -21,3 +21,6 @@ resultados/cache/*
 .idea/
 .DS_Store
 Thumbs.db
+
+# Respostas de API guardadas pelo experimento arquivado (podem conter dados das contas)
+arquivo/**/resultados/cache/

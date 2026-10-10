@@ -235,3 +235,11 @@ Mensagem de correção:
 ```
 Your answer did not follow the requested format. Respond ONLY with the JSON object {"prob_subir": <number from 0 to 1>}, with no other text.
 ```
+
+### Desvio 2 (09/10/2026): experimento encerrado
+
+O experimento foi encerrado por decisão do autor em 09/10/2026, com 17 pregões avaliados de 250
+previstos. **Não há conclusões**: todos os resultados ficaram "parciais", e os intervalos de
+confiança de todas as comparações cruzaram o zero. O projeto passou a ser uma linha de produção
+em que ML, LLM e Jev trabalham juntos (ver `docs/superpowers/specs/2026-10-09-linha-etapa1-design.md`).
+O código, as decisões e os resultados ficam preservados nesta pasta.
