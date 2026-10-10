@@ -86,3 +86,15 @@ def test_dia_com_metade_das_acoes_usa_o_pregao_anterior(base_sintetica, capsys):
 def test_dia_completo_continua_sendo_o_ultimo(base_sintetica):
     dia, faltando = hoje.escolher_dia(base_sintetica.tabela)
     assert dia == base_sintetica.tabela["data"].max() and faltando == []
+
+
+def test_se_o_relatorio_falhar_o_json_nao_e_criado(arquivos, base_sintetica, monkeypatch):
+    _gravar_escolha()
+
+    def falha(self, *args, **kwargs):
+        raise OSError("disco cheio")
+
+    monkeypatch.setattr(type(config.ARQUIVO_RELATORIO_PROVA), "write_text", falha)
+    with pytest.raises(OSError):
+        prova_final.rodar(base_sintetica)
+    assert not config.ARQUIVO_PROVA_FINAL.exists()

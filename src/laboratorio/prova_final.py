@@ -80,9 +80,13 @@ def rodar(base: Base | None = None) -> dict:
         "criterios": resultado_criterios,
         "aprovado": all(resultado_criterios.values()),
     }
+    # Monta os dois textos antes de gravar qualquer coisa. O JSON é o que tranca novas execuções,
+    # então ele é gravado por ÚLTIMO: se o .md falhar, a prova ainda não foi "gasta".
+    texto_json = json.dumps(resultado, indent=2, ensure_ascii=False)
+    texto_relatorio = _relatorio(resultado)
     config.ARQUIVO_PROVA_FINAL.parent.mkdir(parents=True, exist_ok=True)
-    config.ARQUIVO_PROVA_FINAL.write_text(json.dumps(resultado, indent=2, ensure_ascii=False), encoding="utf-8")
-    config.ARQUIVO_RELATORIO_PROVA.write_text(_relatorio(resultado), encoding="utf-8")
+    config.ARQUIVO_RELATORIO_PROVA.write_text(texto_relatorio, encoding="utf-8")
+    config.ARQUIVO_PROVA_FINAL.write_text(texto_json, encoding="utf-8")
 
     veredito = "APROVADA para uso com cautela" if resultado["aprovado"] else "NÃO aprovada"
     print(f"\nResultado: {veredito}")
